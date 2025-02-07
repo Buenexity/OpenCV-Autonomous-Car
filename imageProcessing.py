@@ -17,7 +17,7 @@ ret, image = cv2.threshold(image, 125, 255, cv2.THRESH_BINARY)
 
 
 
-kernel = np.ones((20, 20), np.uint8)
+kernel = np.ones((17, 17), np.uint8)
 
 # # Apply erosion
 image = cv2.erode(image, kernel, iterations=1)
