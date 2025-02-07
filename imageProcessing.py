@@ -15,6 +15,15 @@ image = cv2.cvtColor(image_col, cv2.COLOR_BGR2GRAY)
 # Apply thresholding
 ret, image = cv2.threshold(image, 125, 255, cv2.THRESH_BINARY)
 
+
+
+kernel = np.ones((20, 20), np.uint8)
+
+# # Apply erosion
+image = cv2.erode(image, kernel, iterations=1)
+
+
+
 # Find contours
 contours, hierarchy = cv2.findContours(image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
