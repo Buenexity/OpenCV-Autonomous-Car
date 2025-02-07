@@ -6,14 +6,14 @@ font = cv2.FONT_HERSHEY_COMPLEX
 
 # Load the image
 # image = cv2.imread('image.jpg')
-# image = cv2.imread('imagecarpet.jpg')
-image_col = cv2.imread('./images/imagecarpet2.jpg')
+image_col = cv2.imread('./images/imagecarpet.jpg')
+#image_col = cv2.imread('./images/imagecarpet2.jpg')
 
 # Convert to grayscale
 image = cv2.cvtColor(image_col, cv2.COLOR_BGR2GRAY)
 
 # Apply thresholding
-ret, image = cv2.threshold(image, 125, 255, cv2.THRESH_BINARY)
+ret, image = cv2.threshold(image, 120, 255, cv2.THRESH_BINARY)
 
 
 
