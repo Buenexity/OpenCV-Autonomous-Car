@@ -72,7 +72,8 @@ def StopMotors():
     GPIO.output(Motor_IN4, GPIO.LOW)   
     print("STOP")
 
-# Main loop 
+# Test drive loop
+"""
 try:
     MoveForward()
     time.sleep(10)
@@ -106,4 +107,4 @@ finally:
     pwm_motor_1.stop()
     pwm_motor_2.stop()
     GPIO.cleanup()  
-
+"""
