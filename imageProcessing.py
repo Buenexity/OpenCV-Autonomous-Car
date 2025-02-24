@@ -3,6 +3,9 @@ import numpy as np
 
 font = cv2.FONT_HERSHEY_COMPLEX 
 
+ROI_WIDTH_CONSTANT = 0.5
+ROI_HEIGHT_CONSTANT = 4
+
 def FindOffset():
         image_col = cv2.imread('./images/c.jpg')
 
@@ -19,8 +22,8 @@ def FindOffset():
 
         # Region of interest for line detection
         # adjust constants to change roi dimension
-        box_width_track = int(width * 0.5)  
-        box_height_track = int(height // 4)      
+        box_width_track = int(width * ROI_WIDTH_CONSTANT)  
+        box_height_track = int(height // ROI_HEIGHT_CONSTANT)      
         box_x_track = (width - box_width_track) // 2
         box_y_track = height - box_height_track  
 
