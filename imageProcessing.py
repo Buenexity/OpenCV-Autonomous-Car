@@ -1,10 +1,11 @@
-import cv2 as cv2
+import cv2
 import numpy as np
 
 
 font = cv2.FONT_HERSHEY_COMPLEX 
 
 def FindOffset():
+
     # Load the image
     image_col = cv2.imread('./images/track.jpg')
 
@@ -93,3 +94,42 @@ def FindOffset():
     cv2.waitKey(0)
     cv2.destroyAllWindows()
     return offsetSum
+
+# Returns 0 for not close enough to any stoplight, 1 for red, and 2 for green
+light_test = cv2.imread('./images/stoplights.jpg')
+
+def Find_Stoplight(image_rgb):
+    # It converts the BGR color space of image to HSV color space 
+    image_hsv = cv2.cvtColor(image_rgb, cv2.COLOR_BGR2HSV)
+
+    # Threshold of red and green in HSV space 
+    lower_red = np.array([0, 140, 100]) 
+    upper_red = np.array([10, 255, 255]) 
+    lower_green = np.array([80, 160, 40])
+    upper_green = np.array([90, 255, 255])
+  
+    # preparing the mask to overlay 
+    red_mask = cv2.inRange(image_hsv, lower_red, upper_red)
+    green_mask = cv2.inRange(image_hsv, lower_green, upper_green) 
+      
+    # The black region in the mask has the value of 0, 
+    # so when multiplied with original image removes all non-blue regions 
+    red_result = cv2.bitwise_and(image_rgb, image_rgb, mask = red_mask) 
+    green_result = cv2.bitwise_and(image_rgb, image_rgb, mask = green_mask)
+
+    image_rgb = cv2.resize(image_rgb, (image_rgb.shape[1] // 8, image_rgb.shape[0] // 8))
+    red_mask = cv2.resize(red_mask, (red_mask.shape[1] // 8, red_mask.shape[0] // 8))
+    red_result = cv2.resize(red_result, (red_result.shape[1] // 8, red_result.shape[0] // 8))
+    green_mask = cv2.resize(green_mask, (green_mask.shape[1] // 8, green_mask.shape[0] // 8))
+    green_result = cv2.resize(green_result, (green_result.shape[1] // 8, green_result.shape[0] // 8))
+  
+    cv2.imshow('rgb', image_rgb) 
+    cv2.imshow('rmask', red_mask) 
+    cv2.imshow('rresult', red_result)
+    cv2.imshow('gmask', green_mask) 
+    cv2.imshow('gresult', green_result) 
+      
+    cv2.waitKey(0) 
+  
+    cv2.destroyAllWindows() 
+
