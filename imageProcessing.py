@@ -7,7 +7,7 @@ ROI_WIDTH_CONSTANT = 0.5
 ROI_HEIGHT_CONSTANT = 4
 
 def FindOffset():
-        image_col = cv2.imread('./images/c.jpg')
+        image_col = cv2.imread('./images/image.jpg')
 
         # Image dimensions
         height, width, channels = image_col.shape
@@ -116,9 +116,12 @@ def FindOffset():
                         cv2.putText(image_col, string, (x, y), font, 0.5, (0, 255, 0))  
                 i = i + 1
 
+
+        
+
         # Showing the final image. 
-        new_width = image.shape[1] 
-        new_height = image.shape[0] 
+        new_width = image.shape[-1] 
+        new_height = image.shape[1] 
         # Guide line for center
         center_x, center_y = width // 2, height // 2
         cv2.line(image_col, (center_x, 0), (center_x, height), (255, 0, 0), 5)
@@ -127,8 +130,18 @@ def FindOffset():
         resized_image = cv2.resize(image, (new_width, new_height))
         resized_image_col = cv2.resize(image_col, (new_width, new_height))
 
+        cv2.namedWindow('image', cv2.WINDOW_NORMAL)
+        cv2.namedWindow('image_col', cv2.WINDOW_NORMAL)
+
+        cv2.resizeWindow('image', 800, 600)
+        cv2.resizeWindow('image_col', 800, 600)
+
         cv2.imshow('image', resized_image)
-        cv2.imshow('image_col', resized_image_col)    
+        cv2.imshow('image_col', resized_image_col)
+
+
+        # cv2.imshow('image', resized_image)
+        # cv2.imshow('image_col', resized_image_col)    
         cv2.waitKey(0)
         cv2.destroyAllWindows()
         return offsetSum
