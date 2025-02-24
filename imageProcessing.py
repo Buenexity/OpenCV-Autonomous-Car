@@ -1,5 +1,11 @@
 import cv2
 import numpy as np
+import re
+import pytesseract
+pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+
+
+
 
 font = cv2.FONT_HERSHEY_COMPLEX 
 
@@ -116,12 +122,9 @@ def FindOffset():
                         cv2.putText(image_col, string, (x, y), font, 0.5, (0, 255, 0))  
                 i = i + 1
 
-
-        
-
         # Showing the final image. 
-        new_width = image.shape[-1] 
-        new_height = image.shape[1] 
+        new_width = image.shape[1] 
+        new_height = image.shape[0] 
         # Guide line for center
         center_x, center_y = width // 2, height // 2
         cv2.line(image_col, (center_x, 0), (center_x, height), (255, 0, 0), 5)
@@ -130,18 +133,71 @@ def FindOffset():
         resized_image = cv2.resize(image, (new_width, new_height))
         resized_image_col = cv2.resize(image_col, (new_width, new_height))
 
+        # resize the windows
         cv2.namedWindow('image', cv2.WINDOW_NORMAL)
         cv2.namedWindow('image_col', cv2.WINDOW_NORMAL)
 
         cv2.resizeWindow('image', 800, 600)
         cv2.resizeWindow('image_col', 800, 600)
 
+        # cv2.imshow('image', image)
+        # cv2.imshow('image_col', image_col)
+
         cv2.imshow('image', resized_image)
-        cv2.imshow('image_col', resized_image_col)
+        cv2.imshow('image_col', resized_image_col)    
 
-
-        # cv2.imshow('image', resized_image)
-        # cv2.imshow('image_col', resized_image_col)    
         cv2.waitKey(0)
         cv2.destroyAllWindows()
         return offsetSum
+
+def SpeedLimitDetection():
+    # Load the image
+    # image_col = cv2.imread('./images/numbers/twenty.jpg')
+    image_col = cv2.imread('./images/numbers/twentyangled.jpg')
+    if image_col is None:
+        print("Image not found.")
+        return None
+
+    # Convert to grayscale
+    gray = cv2.cvtColor(image_col, cv2.COLOR_BGR2GRAY)
+    # Apply Gaussian blur to reduce noise
+    gray = cv2.GaussianBlur(gray, (5, 5), 0)
+    
+    # Apply thresholding to get a binary image
+    ret, thresh = cv2.threshold(gray, 120, 255, cv2.THRESH_BINARY_INV)
+    
+    # Define a region of interest (ROI) where the speed limit number is expected.
+    # Here, we choose the central portion of the image (adjust these values as needed).
+    height, width = gray.shape[:2]
+    roi_x = int(width * 0.25)
+    roi_y = int(height * 0.25)
+    roi_w = int(width * 0.5)
+    roi_h = int(height * 0.5)
+    roi = thresh[roi_y:roi_y+roi_h, roi_x:roi_x+roi_w]
+
+    # Optionally, resize the ROI to enhance OCR accuracy
+    roi_resized = cv2.resize(roi, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+    
+    # Optionally, apply a morphological opening to remove noise
+    kernel = np.ones((3, 3), np.uint8)
+    roi_clean = cv2.morphologyEx(roi_resized, cv2.MORPH_OPEN, kernel)
+    
+    # Set up pytesseract to detect only digits.
+    # "--psm 8" treats the image as a single word.
+    config = "--psm 8 -c tessedit_char_whitelist=0123456789"
+    detected_text = pytesseract.image_to_string(roi_clean, config=config)
+    
+    # Clean the result (remove any whitespace/newlines)
+    detected_text = detected_text.strip()
+    print("Detected speed limit:", detected_text)
+    
+    # Optionally, display the ROI window for debugging
+    cv2.namedWindow('Speed Limit ROI', cv2.WINDOW_NORMAL)
+    cv2.resizeWindow('Speed Limit ROI', 400, 400)
+    cv2.imshow('Speed Limit ROI', gray)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    
+    return detected_text
+
+
