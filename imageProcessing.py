@@ -3,6 +3,7 @@ import numpy as np
 
 
 font = cv2.FONT_HERSHEY_COMPLEX 
+STOPLIGHT_SIZE = 40
 
 def FindOffset():
 
@@ -89,16 +90,20 @@ def FindOffset():
     resized_image = cv2.resize(image, (new_width, new_height))
     resized_image_col = cv2.resize(image_col, (new_width, new_height))
 
-    cv2.imshow('image', resized_image)
-    cv2.imshow('image_col', resized_image_col)    
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    # cv2.imshow('image', resized_image)
+    # cv2.imshow('image_col', resized_image_col)    
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
     return offsetSum
 
 # Returns 0 for not close enough to any stoplight, 1 for red, and 2 for green
 light_test = cv2.imread('./images/stoplights.jpg')
 
+
 def Find_Stoplight(image_rgb):
+    # Call helper function to create blob detector
+    circle_detector = Create_Circle_Detector()
+
     # It converts the BGR color space of image to HSV color space 
     image_hsv = cv2.cvtColor(image_rgb, cv2.COLOR_BGR2HSV)
 
@@ -108,28 +113,69 @@ def Find_Stoplight(image_rgb):
     lower_green = np.array([80, 160, 40])
     upper_green = np.array([90, 255, 255])
   
-    # preparing the mask to overlay 
+    # Black-and-white masks for each color
     red_mask = cv2.inRange(image_hsv, lower_red, upper_red)
+    red_mask = cv2.bitwise_not(red_mask)
     green_mask = cv2.inRange(image_hsv, lower_green, upper_green) 
-      
-    # The black region in the mask has the value of 0, 
-    # so when multiplied with original image removes all non-blue regions 
-    red_result = cv2.bitwise_and(image_rgb, image_rgb, mask = red_mask) 
-    green_result = cv2.bitwise_and(image_rgb, image_rgb, mask = green_mask)
 
-    image_rgb = cv2.resize(image_rgb, (image_rgb.shape[1] // 8, image_rgb.shape[0] // 8))
-    red_mask = cv2.resize(red_mask, (red_mask.shape[1] // 8, red_mask.shape[0] // 8))
-    red_result = cv2.resize(red_result, (red_result.shape[1] // 8, red_result.shape[0] // 8))
-    green_mask = cv2.resize(green_mask, (green_mask.shape[1] // 8, green_mask.shape[0] // 8))
-    green_result = cv2.resize(green_result, (green_result.shape[1] // 8, green_result.shape[0] // 8))
-  
-    cv2.imshow('rgb', image_rgb) 
+    # Blur and erode to eliminate noise
+    red_mask = cv2.blur(red_mask, (40, 40))
+    red_mask = cv2.erode(red_mask, (80,80), iterations=4)
+    #green_mask = cv2.blur(green_mask, (4,4))
+
+    # TODO: just pick an area of interest and count the pixels in the mask
+    
+    # The black region in the mask has the value of 0, 
+    # so when multiplied with original image removes all regions of other colors
+    red = cv2.bitwise_and(image_rgb, image_rgb, mask = red_mask) 
+    #green = cv2.bitwise_and(image_rgb, image_rgb, mask = green_mask)
+
+    # Detect blobs 
+    rlight_keypoints = circle_detector.detect(red_mask)
+    
+    # Draw blobs on our image as red circles 
+    blank = np.zeros((1, 1))  
+    image_rgb = cv2.drawKeypoints(image_rgb, rlight_keypoints, blank, (0, 0, 255), 
+                            cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS) 
+    
+    number_of_blobs = len(rlight_keypoints) 
+    text = "Number of Circular Blobs: " + str(len(rlight_keypoints)) 
+    cv2.putText(image_rgb, text, (20, 550), 
+                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 100, 255), 2) 
+    
+    # Show blobs 
+    cv2.imshow("Filtering Circular Blobs Only", image_rgb)
     cv2.imshow('rmask', red_mask) 
-    cv2.imshow('rresult', red_result)
-    cv2.imshow('gmask', green_mask) 
-    cv2.imshow('gresult', green_result) 
+    cv2.waitKey(0)
+
+    #image_rgb = cv2.resize(image_rgb, (image_rgb.shape[1] // 8, image_rgb.shape[0] // 8))
+    #red_mask = cv2.resize(red_mask, (red_mask.shape[1] // 8, red_mask.shape[0] // 8))
+    #red_result = cv2.resize(red_result, (red_result.shape[1] // 8, red_result.shape[0] // 8))
+    #green_mask = cv2.resize(green_mask, (green_mask.shape[1] // 8, green_mask.shape[0] // 8))
+    #green_result = cv2.resize(green_result, (green_result.shape[1] // 8, green_result.shape[0] // 8))
+
+    #cv2.imshow('rgb', image_rgb) 
+    #cv2.imshow('rresult', red_result)
+    #cv2.imshow('gmask', green_mask) 
+    #cv2.imshow('gresult', green_result) 
       
-    cv2.waitKey(0) 
-  
-    cv2.destroyAllWindows() 
+    #cv2.waitKey(0) 
+    #acicv2.destroyAllWindows() 
+
+    return
+
+def Create_Circle_Detector():
+    # Set our filtering parameters 
+    # Initialize parameter setting using cv2.SimpleBlobDetector 
+    params = cv2.SimpleBlobDetector_Params() 
+    
+    # Set Area filtering parameters 
+    params.filterByArea = True
+    params.minArea = STOPLIGHT_SIZE
+    
+    # Create a detector with the parameters 
+    detector = cv2.SimpleBlobDetector_create(params) 
+        
+    return detector 
+
 
