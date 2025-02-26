@@ -10,14 +10,14 @@ Motor_IN3 = 18
 Motor_IN2 = 23
 Motor_IN1 = 24
 
-Pwm_ENA = 12
-Pwm_ENB = 13
+#Pwm_ENA = 12
+#Pwm_ENB = 13
 
 GPIO.setmode(GPIO.BCM)  # Set GPIO pin mode
 
 #pwm pins
-GPIO.setup(Pwm_ENA, GPIO.OUT)
-GPIO.setup(Pwm_ENB, GPIO.OUT)
+#GPIO.setup(Pwm_ENA, GPIO.OUT)
+#GPIO.setup(Pwm_ENB, GPIO.OUT)
 
 #setup pins
 GPIO.setup(Motor_IN1, GPIO.OUT)
@@ -27,12 +27,12 @@ GPIO.setup(Motor_IN4, GPIO.OUT)
 
 
 #PWM pins @ 100hz frequency
-pwm_motor_1 = GPIO.PWM(Pwm_ENA, 100) 
-pwm_motor_2 = GPIO.PWM(Pwm_ENB, 100)
+#pwm_motor_1 = GPIO.PWM(Pwm_ENA, 100) 
+#pwm_motor_2 = GPIO.PWM(Pwm_ENB, 100)
 
 #start the motors @ 0% duty cycle
-pwm_motor_1.start(0)
-pwm_motor_2.start(0)
+#pwm_motor_1.start(0)
+#pwm_motor_2.start(0)
 
 #Motor Functions
 

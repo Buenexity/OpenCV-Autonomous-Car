@@ -3,11 +3,11 @@ import numpy as np
 
 font = cv2.FONT_HERSHEY_COMPLEX 
 
-ROI_WIDTH_CONSTANT = 0.5
-ROI_HEIGHT_CONSTANT = 4
+ROI_WIDTH_CONSTANT = 1
+ROI_HEIGHT_CONSTANT = 3
 
-def FindOffset():
-        image_col = cv2.imread('./images/c.jpg')
+def FindOffset(frame, ret):
+        image_col = frame;
 
         # Image dimensions
         height, width, channels = image_col.shape
@@ -17,7 +17,7 @@ def FindOffset():
         image = cv2.GaussianBlur(image, (5, 5), 0)
 
         # Apply thresholding
-        ret, image = cv2.threshold(image, 120, 255, cv2.THRESH_BINARY_INV)
+        # ret, image = cv2.threshold(image, 120, 255, cv2.THRESH_BINARY_INV)
         #kernel = np.ones((20, 20), np.uint8)
 
         # Region of interest for line detection
@@ -32,11 +32,11 @@ def FindOffset():
     
 
         
-
+        
         # square where tracking takes place
         roi = image[roi_y:roi_y + roi_h, roi_x:roi_x + roi_w]
         cv2.rectangle(image_col, (roi_x, roi_y), (roi_x + roi_w, roi_y + roi_h), (255, 255, 0), 5)
-
+        ret, roi = cv2.threshold(roi, 180, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
         # Apply erosion
         image = cv2.erode(roi,None, iterations=2)
 
@@ -47,7 +47,7 @@ def FindOffset():
         offsetSum = 0
 
         # Area to remove really small contours that maybe noise 
-        min_contour_area = 500
+        min_contour_area = 100
 
         for cnt in contours: 
             approx = cv2.approxPolyDP(cnt, 0.009 * cv2.arcLength(cnt, True), True) 
@@ -124,11 +124,9 @@ def FindOffset():
         cv2.line(image_col, (center_x, 0), (center_x, height), (255, 0, 0), 5)
 
         # Resize the image
-        resized_image = cv2.resize(image, (new_width, new_height))
-        resized_image_col = cv2.resize(image_col, (new_width, new_height))
+        #resized_image = cv2.resize(image, (new_width, new_height))
+        #resized_image_col = cv2.resize(image_col, (new_width, new_height))
 
-        cv2.imshow('image', resized_image)
-        cv2.imshow('image_col', resized_image_col)    
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        cv2.imshow('image', image)
+        cv2.imshow('image_col', image_col)  
         return offsetSum
