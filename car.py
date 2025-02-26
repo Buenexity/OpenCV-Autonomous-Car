@@ -3,15 +3,15 @@ import time
 
 # Motor Pins
 # Left motor (Motor IN1 - Pin 17, Motor IN2 - Pin 18)
-Motor_IN1 = 17
-Motor_IN2 = 18
+Motor_IN4 = 17
+Motor_IN3 = 18
 
 # Right motor (Motor IN3 - Pin 23, Motor IN4 - Pin 24)
-Motor_IN3 = 23
-Motor_IN4 = 24
+Motor_IN2 = 23
+Motor_IN1 = 24
 
-Pwm_ENA = 18
-Pwm_ENB = 19
+Pwm_ENA = 12
+Pwm_ENB = 13
 
 GPIO.setmode(GPIO.BCM)  # Set GPIO pin mode
 
@@ -51,19 +51,19 @@ def MoveBackward():
     GPIO.output(Motor_IN4, GPIO.HIGH)  
     print("back")
 
-def TurnLeft():
+def TurnRight():
     GPIO.output(Motor_IN1, GPIO.LOW)   
     GPIO.output(Motor_IN2, GPIO.HIGH)  # Left motor reverse
     GPIO.output(Motor_IN3, GPIO.HIGH)  
     GPIO.output(Motor_IN4, GPIO.LOW)   # Right motor stop
-    print("Left")
+    print("Right")
 
-def TurnRight():
+def TurnLeft():
     GPIO.output(Motor_IN1, GPIO.HIGH)  # Left motor forward
     GPIO.output(Motor_IN2, GPIO.LOW)   
     GPIO.output(Motor_IN3, GPIO.LOW)   # Right motor stop
     GPIO.output(Motor_IN4, GPIO.HIGH)  
-    print("Right")
+    print("Left")
 
 def StopMotors():
     GPIO.output(Motor_IN1, GPIO.LOW)   
