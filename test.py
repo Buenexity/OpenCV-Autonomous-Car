@@ -1,8 +1,10 @@
 import cv2
 import numpy as np
+from findAngle import get_contour_angles
+
 
 # Load the image
-image_col = cv2.imread('./images/imagecarpet.jpg')
+image_col = cv2.imread('./images/track.jpg')
 
 # Convert the image to grayscale
 image_gray = cv2.cvtColor(image_col, cv2.COLOR_BGR2GRAY)
@@ -19,6 +21,8 @@ dilated_image = cv2.dilate(binary_image, kernel, iterations=1)
 
 # Find contours (the edges of the black line)
 contours, _ = cv2.findContours(dilated_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+get_contour_angles(contours, image_col)
 
 # Draw the contours on the original image (for visualization)
 cv2.drawContours(image_col, contours, -1, (0, 255, 0), 2)
