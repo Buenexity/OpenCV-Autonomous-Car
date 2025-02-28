@@ -15,10 +15,10 @@ while True:
     if not ret:
         print("Can't receive frame (stream end?). Exiting ...")
     carOffset = imp.FindOffset(frame, ret)
-    if (carOffset < -20):
+    if (carOffset < -40):
         TurnLeft()
         print("turn left")
-    elif (carOffset > 20):
+    elif (carOffset > 40):
         TurnRight()
         print("turn right")
     else:

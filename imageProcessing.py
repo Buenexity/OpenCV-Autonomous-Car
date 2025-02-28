@@ -3,8 +3,8 @@ import numpy as np
 
 font = cv2.FONT_HERSHEY_COMPLEX 
 
-ROI_WIDTH_CONSTANT = 1
-ROI_HEIGHT_CONSTANT = 3
+ROI_WIDTH_CONSTANT = 0.8
+ROI_HEIGHT_CONSTANT = 2
 
 def FindOffset(frame, ret):
         image_col = frame;
@@ -36,9 +36,9 @@ def FindOffset(frame, ret):
         # square where tracking takes place
         roi = image[roi_y:roi_y + roi_h, roi_x:roi_x + roi_w]
         cv2.rectangle(image_col, (roi_x, roi_y), (roi_x + roi_w, roi_y + roi_h), (255, 255, 0), 5)
-        ret, roi = cv2.threshold(roi, 180, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+        ret, roi = cv2.threshold(roi, 120, 255, cv2.THRESH_BINARY_INV)
         # Apply erosion
-        image = cv2.erode(roi,None, iterations=2)
+        roi = cv2.erode(roi,None, iterations=2)
 
         # Find contours
         contours, hierarchy = cv2.findContours(roi, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -47,7 +47,7 @@ def FindOffset(frame, ret):
         offsetSum = 0
 
         # Area to remove really small contours that maybe noise 
-        min_contour_area = 100
+        min_contour_area = 20
 
         for cnt in contours: 
             approx = cv2.approxPolyDP(cnt, 0.009 * cv2.arcLength(cnt, True), True) 
