@@ -1,7 +1,11 @@
-from car import TurnLeft, MoveForward, TurnRight
+from car import Motor
 import cv2
 import imageProcessing as imp
 cap = cv2.VideoCapture(0)
+
+
+# Initialize car class with a percentage of total speed
+car = Motor(30)
 
 while True:
     if cap.isOpened(): 
@@ -16,13 +20,13 @@ while True:
         print("Can't receive frame (stream end?). Exiting ...")
     carOffset = imp.FindOffset(frame, ret)
     if (carOffset < -40):
-        TurnLeft()
+        car.TurnLeft()
         print("turn left")
     elif (carOffset > 40):
-        TurnRight()
+        car.TurnRight()
         print("turn right")
     else:
-        MoveForward()
+        car.MoveForward()
         print("go straight")
     
     if cv2.waitKey(1) == ord('q'):
