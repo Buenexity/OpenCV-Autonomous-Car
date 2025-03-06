@@ -1,9 +1,14 @@
 import cv2
 import numpy as np
 
-
 font = cv2.FONT_HERSHEY_COMPLEX 
-STOPLIGHT_SIZE = 40
+STOPLIGHT_MIN_SIZE = 50
+
+# Threshold of red and green stoplights in HSV space 
+lower_red = np.array([0, 140, 110]) 
+upper_red = np.array([4, 255, 255]) 
+lower_green = np.array([80, 160, 40])
+upper_green = np.array([90, 255, 255])
 
 def FindOffset():
 
@@ -96,86 +101,61 @@ def FindOffset():
     # cv2.destroyAllWindows()
     return offsetSum
 
-# Returns 0 for not close enough to any stoplight, 1 for red, and 2 for green
-light_test = cv2.imread('./images/stoplights.jpg')
 
-
-def Find_Stoplight(image_rgb):
-    # Call helper function to create blob detector
-    circle_detector = Create_Circle_Detector()
-
-    # It converts the BGR color space of image to HSV color space 
+# takes an image and a color either 'red' or 'green.' Finds a circle of that color and returns it's radius.
+def Find_Stoplight(image_rgb, color):
+    # convert to HSV color space for better thresholding
     image_hsv = cv2.cvtColor(image_rgb, cv2.COLOR_BGR2HSV)
 
-    # Threshold of red and green in HSV space 
-    lower_red = np.array([0, 140, 100]) 
-    upper_red = np.array([10, 255, 255]) 
-    lower_green = np.array([80, 160, 40])
-    upper_green = np.array([90, 255, 255])
-  
-    # Black-and-white masks for each color
-    red_mask = cv2.inRange(image_hsv, lower_red, upper_red)
-    red_mask = cv2.bitwise_not(red_mask)
-    green_mask = cv2.inRange(image_hsv, lower_green, upper_green) 
+    # Make a black-and-white mask of a specific color
+    if (color == 'red'):
+        mask = cv2.inRange(image_hsv, lower_red, upper_red)
+    elif (color == 'green'):
+        mask = cv2.inRange(image_hsv, lower_green, upper_green) 
+    else:
+        return -1
 
-    # Blur and erode to eliminate noise
-    red_mask = cv2.blur(red_mask, (40, 40))
-    red_mask = cv2.erode(red_mask, (80,80), iterations=4)
-    #green_mask = cv2.blur(green_mask, (4,4))
-
-    # TODO: just pick an area of interest and count the pixels in the mask
+    # Eliminate noise
+    mask = cv2.erode(mask, np.ones((2, 2), np.uint8), iterations=1)
+    mask = cv2.blur(mask, (70, 70))
     
-    # The black region in the mask has the value of 0, 
+    # The black region in the mask has the value of 0
     # so when multiplied with original image removes all regions of other colors
-    red = cv2.bitwise_and(image_rgb, image_rgb, mask = red_mask) 
-    #green = cv2.bitwise_and(image_rgb, image_rgb, mask = green_mask)
+    single_color = cv2.bitwise_and(image_rgb, image_rgb, mask = mask) 
 
-    # Detect blobs 
-    rlight_keypoints = circle_detector.detect(red_mask)
-    
-    # Draw blobs on our image as red circles 
-    blank = np.zeros((1, 1))  
-    image_rgb = cv2.drawKeypoints(image_rgb, rlight_keypoints, blank, (0, 0, 255), 
-                            cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS) 
-    
-    number_of_blobs = len(rlight_keypoints) 
-    text = "Number of Circular Blobs: " + str(len(rlight_keypoints)) 
-    cv2.putText(image_rgb, text, (20, 550), 
-                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 100, 255), 2) 
-    
-    # Show blobs 
-    cv2.imshow("Filtering Circular Blobs Only", image_rgb)
-    cv2.imshow('rmask', red_mask) 
-    cv2.waitKey(0)
+    # convert to grayscale to prepare for Hough transform
+    gray = cv2.cvtColor(single_color, cv2.COLOR_BGR2GRAY)
 
-    #image_rgb = cv2.resize(image_rgb, (image_rgb.shape[1] // 8, image_rgb.shape[0] // 8))
-    #red_mask = cv2.resize(red_mask, (red_mask.shape[1] // 8, red_mask.shape[0] // 8))
-    #red_result = cv2.resize(red_result, (red_result.shape[1] // 8, red_result.shape[0] // 8))
-    #green_mask = cv2.resize(green_mask, (green_mask.shape[1] // 8, green_mask.shape[0] // 8))
-    #green_result = cv2.resize(green_result, (green_result.shape[1] // 8, green_result.shape[0] // 8))
+    # Use Hough circles
+    rows = gray.shape[0]
+    circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, 1, rows / 8,
+                               param1=100, param2=30,
+                               minRadius=STOPLIGHT_MIN_SIZE, maxRadius=300)
 
-    #cv2.imshow('rgb', image_rgb) 
-    #cv2.imshow('rresult', red_result)
-    #cv2.imshow('gmask', green_mask) 
-    #cv2.imshow('gresult', green_result) 
+    print(circles)
+    
+    # Drawing on and displaying the image for testing purposes
+    if circles is not None:
+        circles = np.uint16(np.around(circles))
+        for i in circles[0, :]:
+            center = (i[0], i[1]) # circle center
+            cv2.circle(image_rgb, center, 1, (0, 100, 100), 3) # circle outline
+            radius = i[2]
+            cv2.circle(image_rgb, center, radius, (255, 0, 255), 3)
+
+    image_rgb = cv2.resize(image_rgb, (image_rgb.shape[1] // 6, image_rgb.shape[0] // 6))
+    single_color = cv2.resize(single_color, (single_color.shape[1] // 6, single_color.shape[0] // 6))
+
+    cv2.imshow('circles', image_rgb) 
+    cv2.imshow('single color', single_color)
       
-    #cv2.waitKey(0) 
-    #acicv2.destroyAllWindows() 
+    cv2.waitKey(0) 
+    cv2.destroyAllWindows() 
 
-    return
-
-def Create_Circle_Detector():
-    # Set our filtering parameters 
-    # Initialize parameter setting using cv2.SimpleBlobDetector 
-    params = cv2.SimpleBlobDetector_Params() 
-    
-    # Set Area filtering parameters 
-    params.filterByArea = True
-    params.minArea = STOPLIGHT_SIZE
-    
-    # Create a detector with the parameters 
-    detector = cv2.SimpleBlobDetector_create(params) 
-        
-    return detector 
-
-
+    # Each circle in circles [h, k, r]
+    if circles is None:
+        return 0
+    else:
+        radius = int(circles[0][0][2])
+        # I think this is being affected by earlier code for displaying and may have to remove a [0] in the future
+        return radius
