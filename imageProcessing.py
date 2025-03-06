@@ -153,7 +153,7 @@ def FindOffset():
 def SpeedLimitDetection():
     # Load the image
     # image_col = cv2.imread('./images/numbers/twenty.jpg')
-    image_col = cv2.imread('./images/numbers/twentyangled.jpg')
+    image_col = cv2.imread('./images/numbers/twenty.jpg')
     if image_col is None:
         print("Image not found.")
         return None
