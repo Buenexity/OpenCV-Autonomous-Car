@@ -4,10 +4,10 @@ import re
 import pytesseract
 pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
+font = cv2.FONT_HERSHEY_COMPLEX
 
-
-
-font = cv2.FONT_HERSHEY_COMPLEX 
+LOWER_YELLOW = np.array([20, 200, 130])
+UPPER_YELLOW = np.array([30, 255, 250])
 
 ROI_WIDTH_CONSTANT = 0.8
 ROI_HEIGHT_CONSTANT = 2
@@ -137,52 +137,90 @@ def FindOffset(frame, ret):
         cv2.imshow('image_col', image_col)  
         return offsetSum
 
-def SpeedLimitDetection():
-    # Load the image
-    # image_col = cv2.imread('./images/numbers/twenty.jpg')
-    image_col = cv2.imread('./images/numbers/twenty.jpg')
-    if image_col is None:
-        print("Image not found.")
-        return None
+def SpeedLimitDetection(image_path):
+    # Read the input image
+    src = cv2.imread(image_path)
 
-    # Convert to grayscale
-    gray = cv2.cvtColor(image_col, cv2.COLOR_BGR2GRAY)
-    # Apply Gaussian blur to reduce noise
-    gray = cv2.GaussianBlur(gray, (5, 5), 0)
-    
-    # Apply thresholding to get a binary image
-    ret, thresh = cv2.threshold(gray, 120, 255, cv2.THRESH_BINARY_INV)
-    
-    # Define a region of interest (ROI) where the speed limit number is expected.
-    # Here, we choose the central portion of the image (adjust these values as needed).
-    height, width = gray.shape[:2]
-    roi_x = int(width * 0.25)
-    roi_y = int(height * 0.25)
-    roi_w = int(width * 0.5)
-    roi_h = int(height * 0.5)
-    roi = thresh[roi_y:roi_y+roi_h, roi_x:roi_x+roi_w]
+    # Convert from BGR to HSV color space
+    image_hsv = cv2.cvtColor(src, cv2.COLOR_BGR2HSV)
 
-    # Optionally, resize the ROI to enhance OCR accuracy
-    roi_resized = cv2.resize(roi, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
-    
-    # Optionally, apply a morphological opening to remove noise
-    kernel = np.ones((3, 3), np.uint8)
-    roi_clean = cv2.morphologyEx(roi_resized, cv2.MORPH_OPEN, kernel)
-    
-    # Set up pytesseract to detect only digits.
-    # "--psm 8" treats the image as a single word.
-    config = "--psm 8 -c tessedit_char_whitelist=0123456789"
-    detected_text = pytesseract.image_to_string(roi_clean, config=config)
-    
-    # Clean the result (remove any whitespace/newlines)
-    detected_text = detected_text.strip()
-    print("Detected speed limit:", detected_text)
-    
-    # Optionally, display the ROI window for debugging
-    cv2.namedWindow('Speed Limit ROI', cv2.WINDOW_NORMAL)
-    cv2.resizeWindow('Speed Limit ROI', 400, 400)
-    cv2.imshow('Speed Limit ROI', gray)
+    # Create a mask for all pixels within the yellow range
+    mask = cv2.inRange(image_hsv, LOWER_YELLOW, UPPER_YELLOW)
+
+    # Optional: Blur the mask to reduce noise (you can adjust kernel size)
+    mask = cv2.blur(mask, (5, 5))
+
+    # Apply the mask to the original image
+    single_color = cv2.bitwise_and(src, src, mask=mask)
+
+    # Convert the masked image to grayscale
+    gray = cv2.cvtColor(single_color, cv2.COLOR_BGR2GRAY)
+
+    # (Optional) Apply a slight blur or threshold before HoughCircles if needed
+    # gray = cv2.GaussianBlur(gray, (5, 5), 0)
+
+    cv2.imshow("Gray", gray)
+
+    # Use HoughCircles to detect circles in the grayscale image
+    rows = gray.shape[0]
+    # Adjust minRadius/maxRadius based on your expected circle sizes
+    circles = cv2.HoughCircles(
+        gray, 
+        cv2.HOUGH_GRADIENT, 
+        dp=1, 
+        minDist=rows / 8, 
+        param1=100, 
+        param2=30, 
+        minRadius=10,    # Example minimum radius
+        maxRadius=300    # Example maximum radius
+    )
+
+    # Print or process the detected circles
+    print(circles)
+    iter = 0
+    # Optionally, draw the circles on the original image for visualization
+    if circles is not None:
+        circles = np.uint16(np.around(circles))
+        for circle in circles[0, :]:
+            x, y, r = circle
+            iter = iter + 1
+            # Use a fraction of the detected radius to crop only the inner region.
+            # Adjust the factor (e.g., 0.6) based on your image.
+            new_r = int(r * 0.6)
+            
+            # Define new cropping boundaries based on the reduced radius
+            x1 = max(0, x - new_r)
+            y1 = max(0, y - new_r)
+            x2 = min(src.shape[1], x + new_r)
+            y2 = min(src.shape[0], y + new_r)
+            
+            # Crop the image to the new ROI
+            cropped = src[y1:y2, x1:x2]
+            
+            # Preprocess the cropped image for OCR
+            gray_cropped = cv2.cvtColor(cropped, cv2.COLOR_BGR2GRAY)
+            _, thresh = cv2.threshold(gray_cropped, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
+            
+            #kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+            kernel = np.ones((3,3), np.uint8)
+
+            thresh = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel, iterations=1)
+            cv2.imshow(f"Window {iter}", thresh)
+
+            # Configure pytesseract to read only digits
+            config = r'-c tessedit_char_whitelist=0123456789 --psm 7'
+            text = pytesseract.image_to_string(thresh, config=config)
+            
+            print(f"Detected text: {text.strip()}")
+            
+            # For visualization, draw the original circle and the new crop area on the image
+            cv2.circle(src, (x, y), r, (0, 255, 0), 2)
+            cv2.rectangle(src, (x1, y1), (x2, y2), (255, 0, 0), 2)
+
+            cv2.putText(src, text.strip(), (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+
+    cv2.imshow("Detected Circles and Numbers", src)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
     
-    return detected_text
+    return

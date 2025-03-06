@@ -1,7 +1,7 @@
 #from car import TurnLeft, MoveForward, TurnRight
 import cv2
 import imageProcessing as imp
-cap = cv2.VideoCapture(0)
+#cap = cv2.VideoCapture(0)
 
 # while True:
 #     if cap.isOpened(): 
@@ -28,7 +28,7 @@ cap = cv2.VideoCapture(0)
 #     if cv2.waitKey(1) == ord('q'):
 #         break
 
-speedLimit = imp.SpeedLimitDetection()
+speedLimit = imp.SpeedLimitDetection('./images/yellownumber.PNG')
 
 #print(f"Speed Limit: {speedLimit}")
 
