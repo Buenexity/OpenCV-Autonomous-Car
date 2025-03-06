@@ -9,11 +9,11 @@ pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tessera
 
 font = cv2.FONT_HERSHEY_COMPLEX 
 
-ROI_WIDTH_CONSTANT = 0.5
-ROI_HEIGHT_CONSTANT = 4
+ROI_WIDTH_CONSTANT = 0.8
+ROI_HEIGHT_CONSTANT = 2
 
-def FindOffset():
-        image_col = cv2.imread('./images/image.jpg')
+def FindOffset(frame, ret):
+        image_col = frame;
 
         # Image dimensions
         height, width, channels = image_col.shape
@@ -23,7 +23,7 @@ def FindOffset():
         image = cv2.GaussianBlur(image, (5, 5), 0)
 
         # Apply thresholding
-        ret, image = cv2.threshold(image, 120, 255, cv2.THRESH_BINARY_INV)
+        # ret, image = cv2.threshold(image, 120, 255, cv2.THRESH_BINARY_INV)
         #kernel = np.ones((20, 20), np.uint8)
 
         # Region of interest for line detection
@@ -38,13 +38,13 @@ def FindOffset():
     
 
         
-
+        
         # square where tracking takes place
         roi = image[roi_y:roi_y + roi_h, roi_x:roi_x + roi_w]
         cv2.rectangle(image_col, (roi_x, roi_y), (roi_x + roi_w, roi_y + roi_h), (255, 255, 0), 5)
-
+        ret, roi = cv2.threshold(roi, 120, 255, cv2.THRESH_BINARY_INV)
         # Apply erosion
-        image = cv2.erode(roi,None, iterations=2)
+        roi = cv2.erode(roi,None, iterations=2)
 
         # Find contours
         contours, hierarchy = cv2.findContours(roi, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -53,7 +53,7 @@ def FindOffset():
         offsetSum = 0
 
         # Area to remove really small contours that maybe noise 
-        min_contour_area = 500
+        min_contour_area = 20
 
         for cnt in contours: 
             approx = cv2.approxPolyDP(cnt, 0.009 * cv2.arcLength(cnt, True), True) 
@@ -130,24 +130,11 @@ def FindOffset():
         cv2.line(image_col, (center_x, 0), (center_x, height), (255, 0, 0), 5)
 
         # Resize the image
-        resized_image = cv2.resize(image, (new_width, new_height))
-        resized_image_col = cv2.resize(image_col, (new_width, new_height))
+        #resized_image = cv2.resize(image, (new_width, new_height))
+        #resized_image_col = cv2.resize(image_col, (new_width, new_height))
 
-        # resize the windows
-        cv2.namedWindow('image', cv2.WINDOW_NORMAL)
-        cv2.namedWindow('image_col', cv2.WINDOW_NORMAL)
-
-        cv2.resizeWindow('image', 800, 600)
-        cv2.resizeWindow('image_col', 800, 600)
-
-        # cv2.imshow('image', image)
-        # cv2.imshow('image_col', image_col)
-
-        cv2.imshow('image', resized_image)
-        cv2.imshow('image_col', resized_image_col)    
-
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        cv2.imshow('image', image)
+        cv2.imshow('image_col', image_col)  
         return offsetSum
 
 def SpeedLimitDetection():
@@ -199,5 +186,3 @@ def SpeedLimitDetection():
     cv2.destroyAllWindows()
     
     return detected_text
-
-
