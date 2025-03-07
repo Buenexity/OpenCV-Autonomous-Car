@@ -2,9 +2,13 @@ import cv2
 import numpy as np
 
 font = cv2.FONT_HERSHEY_COMPLEX 
+STOPLIGHT_MIN_SIZE = 50
 
-ROI_WIDTH_CONSTANT = 0.8
-ROI_HEIGHT_CONSTANT = 2
+# Threshold of red and green stoplights in HSV space 
+lower_red = np.array([0, 140, 110]) 
+upper_red = np.array([4, 255, 255]) 
+lower_green = np.array([80, 160, 40])
+upper_green = np.array([90, 255, 255])
 
 def FindOffset(frame, ret):
         image_col = frame;
@@ -29,10 +33,7 @@ def FindOffset(frame, ret):
 
         # ROI variables
         roi_x, roi_y, roi_w, roi_h = box_x_track, box_y_track, box_width_track, box_height_track
-    
-
-        
-        
+            
         # square where tracking takes place
         roi = image[roi_y:roi_y + roi_h, roi_x:roi_x + roi_w]
         cv2.rectangle(image_col, (roi_x, roi_y), (roi_x + roi_w, roi_y + roi_h), (255, 255, 0), 5)
@@ -130,3 +131,62 @@ def FindOffset(frame, ret):
         cv2.imshow('image', image)
         cv2.imshow('image_col', image_col)  
         return offsetSum
+      
+      
+# takes an image and a color either 'red' or 'green.' Finds a circle of that color and returns it's radius.
+def Find_Stoplight(image_rgb, color):
+    # convert to HSV color space for better thresholding
+    image_hsv = cv2.cvtColor(image_rgb, cv2.COLOR_BGR2HSV)
+
+    # Make a black-and-white mask of a specific color
+    if (color == 'red'):
+        mask = cv2.inRange(image_hsv, lower_red, upper_red)
+    elif (color == 'green'):
+        mask = cv2.inRange(image_hsv, lower_green, upper_green) 
+    else:
+        return -1
+
+    # Eliminate noise
+    mask = cv2.erode(mask, np.ones((2, 2), np.uint8), iterations=1)
+    mask = cv2.blur(mask, (70, 70))
+    
+    # The black region in the mask has the value of 0
+    # so when multiplied with original image removes all regions of other colors
+    single_color = cv2.bitwise_and(image_rgb, image_rgb, mask = mask) 
+
+    # convert to grayscale to prepare for Hough transform
+    gray = cv2.cvtColor(single_color, cv2.COLOR_BGR2GRAY)
+
+    # Use Hough circles
+    rows = gray.shape[0]
+    circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, 1, rows / 8,
+                               param1=100, param2=30,
+                               minRadius=STOPLIGHT_MIN_SIZE, maxRadius=300)
+
+    print(circles)
+    
+    # Drawing on and displaying the image for testing purposes
+    if circles is not None:
+        circles = np.uint16(np.around(circles))
+        for i in circles[0, :]:
+            center = (i[0], i[1]) # circle center
+            cv2.circle(image_rgb, center, 1, (0, 100, 100), 3) # circle outline
+            radius = i[2]
+            cv2.circle(image_rgb, center, radius, (255, 0, 255), 3)
+
+    image_rgb = cv2.resize(image_rgb, (image_rgb.shape[1] // 6, image_rgb.shape[0] // 6))
+    single_color = cv2.resize(single_color, (single_color.shape[1] // 6, single_color.shape[0] // 6))
+
+    cv2.imshow('circles', image_rgb) 
+    cv2.imshow('single color', single_color)
+      
+    cv2.waitKey(0) 
+    cv2.destroyAllWindows() 
+
+    # Each circle in circles [h, k, r]
+    if circles is None:
+        return 0
+    else:
+        radius = int(circles[0][0][2])
+        # I think this is being affected by earlier code for displaying and may have to remove a [0] in the future
+        return radius
