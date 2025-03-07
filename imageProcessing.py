@@ -10,6 +10,8 @@ LOWER_YELLOW = np.array([20, 200, 130])
 UPPER_YELLOW = np.array([30, 255, 250])
 
 STOPLIGHT_MIN_SIZE = 50
+ROI_WIDTH_CONSTANT = 0.8
+ROI_HEIGHT_CONSTANT = 2
 
 
 # Threshold of red and green stoplights in HSV space 
