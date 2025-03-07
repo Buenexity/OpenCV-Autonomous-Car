@@ -1,88 +1,106 @@
 import RPi.GPIO as GPIO
 import time
 
-#Pwm 
+class Motor:
+    def __init__(self, pwm_speed):
+        self.pwm_speed = pwm_speed
+        
+        # Motor Pins
+        self.Motor_IN4 = 24
+        self.Motor_IN3 = 23
+        self.Motor_IN2 = 18
+        self.Motor_IN1 = 17
+        self.Pwm_ENA = 12
+        self.Pwm_ENB = 13
+        self.MotorSpeedA = pwm_speed
+        self.MotorSpeedB = pwm_speed
+        
+        GPIO.setmode(GPIO.BCM)  # Set GPIO pin mode
 
-Pwm_Speed = 30
+        # Setup PWM pins
+        GPIO.setup(self.Pwm_ENA, GPIO.OUT)
+        GPIO.setup(self.Pwm_ENB, GPIO.OUT)
 
-# Motor Pins
-# Left motor (Motor IN1 - Pin 17, Motor IN2 - Pin 18)
-Motor_IN4 = 24
-Motor_IN3 = 23
+        # Setup motor control pins
+        GPIO.setup(self.Motor_IN1, GPIO.OUT)
+        GPIO.setup(self.Motor_IN2, GPIO.OUT)
+        GPIO.setup(self.Motor_IN3, GPIO.OUT)
+        GPIO.setup(self.Motor_IN4, GPIO.OUT)
 
-# Right motor (Motor IN3 - Pin 23, Motor IN4 - Pin 24)
-Motor_IN2 = 18
-Motor_IN1 = 17
+        # PWM initialization @ 1000Hz frequency
+        self.pwm_motor_1 = GPIO.PWM(self.Pwm_ENA, 1000)
+        self.pwm_motor_2 = GPIO.PWM(self.Pwm_ENB, 1000)
+        self.pwm_motor_1.start(0)
+        self.pwm_motor_2.start(0)
+    
+    def move_forward(self):
+        self.pwm_motor_1.ChangeDutyCycle(self.pwm_speed)
+        self.pwm_motor_2.ChangeDutyCycle(self.pwm_speed)
+        GPIO.output(self.Motor_IN1, GPIO.HIGH)
+        GPIO.output(self.Motor_IN2, GPIO.LOW)
+        GPIO.output(self.Motor_IN3, GPIO.LOW)
+        GPIO.output(self.Motor_IN4, GPIO.HIGH)
+        print("Moving forward")
 
-Pwm_ENA = 12
-Pwm_ENB = 13
+    def move_backward(self):
+        self.pwm_motor_1.ChangeDutyCycle(self.pwm_speed)
+        self.pwm_motor_2.ChangeDutyCycle(self.pwm_speed)
+        GPIO.output(self.Motor_IN1, GPIO.LOW)
+        GPIO.output(self.Motor_IN2, GPIO.HIGH)
+        GPIO.output(self.Motor_IN3, GPIO.LOW)
+        GPIO.output(self.Motor_IN4, GPIO.HIGH)
+        print("Moving backward")
+    
+    def turn_left(self):
+        self.pwm_motor_1.ChangeDutyCycle(self.pwm_speed / 2)
+        self.pwm_motor_2.ChangeDutyCycle(self.pwm_speed)
+        GPIO.output(self.Motor_IN1, GPIO.LOW)
+        GPIO.output(self.Motor_IN2, GPIO.LOW)
+        GPIO.output(self.Motor_IN3, GPIO.LOW)
+        GPIO.output(self.Motor_IN4, GPIO.HIGH)
+        print("Turning left")
+    
+    def turn_right(self):
+        self.pwm_motor_1.ChangeDutyCycle(self.pwm_speed)
+        self.pwm_motor_2.ChangeDutyCycle(self.pwm_speed / 2)
+        GPIO.output(self.Motor_IN1, GPIO.HIGH)
+        GPIO.output(self.Motor_IN2, GPIO.LOW)
+        GPIO.output(self.Motor_IN3, GPIO.LOW)
+        GPIO.output(self.Motor_IN4, GPIO.LOW)
+        print("Turning right")
+    
+    def stop_motors(self):
+        self.pwm_motor_1.ChangeDutyCycle(0)
+        self.pwm_motor_2.ChangeDutyCycle(0)
+        GPIO.output(self.Motor_IN1, GPIO.LOW)
+        GPIO.output(self.Motor_IN2, GPIO.LOW)
+        GPIO.output(self.Motor_IN3, GPIO.LOW)
+        GPIO.output(self.Motor_IN4, GPIO.LOW)
+        print("Stopping motors")
+    
+    # Changes left and right motor speeds according to calculated pid values
+    # left motor - offset is subtracted from current base speed
+    # right motor - offset is added from current base speed
 
-GPIO.setmode(GPIO.BCM)  # Set GPIO pin mode
+    def set_pid_speed(self, pid_offset):
+        # Ensure motor speed stays between 0 and 100
+        MotorSpeedA = max(0, min(self.pwm_speed - pid_offset, 60))
+        MotorSpeedB = max(0, min(self.pwm_speed + pid_offset, 60))
+        
+        self.pwm_motor_1.ChangeDutyCycle(MotorSpeedA)
+        self.pwm_motor_2.ChangeDutyCycle(MotorSpeedB)
+        
+        GPIO.output(self.Motor_IN1, GPIO.HIGH)
+        GPIO.output(self.Motor_IN2, GPIO.LOW)
+        GPIO.output(self.Motor_IN3, GPIO.LOW)
+        GPIO.output(self.Motor_IN4, GPIO.HIGH)
+        
+        print(f"Left motor speed: {MotorSpeedA}")
+        print(f"Right motor speed: {MotorSpeedB}")
 
-#pwm pins
-GPIO.setup(Pwm_ENA, GPIO.OUT)
-GPIO.setup(Pwm_ENB, GPIO.OUT)
-
-#setup pins
-GPIO.setup(Motor_IN1, GPIO.OUT)
-GPIO.setup(Motor_IN2, GPIO.OUT)
-GPIO.setup(Motor_IN3, GPIO.OUT)
-GPIO.setup(Motor_IN4, GPIO.OUT)
-
-
-#PWM pins @ 100hz frequency
-pwm_motor_1 = GPIO.PWM(Pwm_ENA, 1000) 
-pwm_motor_2 = GPIO.PWM(Pwm_ENB, 1000)
-print("initiLIIG PQM")
-#start the motors @ 0% duty cycle
-
-pwm_motor_1.start(Pwm_Speed)
-pwm_motor_2.start(Pwm_Speed)
-
-#Motor Functions
-
-def MoveForward():
-    pwm_motor_1.ChangeDutyCycle(Pwm_Speed)       
-    pwm_motor_2.ChangeDutyCycle(Pwm_Speed)
-    GPIO.output(Motor_IN1, GPIO.HIGH)  # Left motor forward
-    GPIO.output(Motor_IN2, GPIO.LOW)   
-    GPIO.output(Motor_IN3, GPIO.LOW)  # Right motor forward
-    GPIO.output(Motor_IN4, GPIO.HIGH)   
-    print("forward")
-
-
-def MoveBackward():
-    pwm_motor_1.ChangeDutyCycle(Pwm_Speed)       
-    pwm_motor_2.ChangeDutyCycle(Pwm_Speed)
-    GPIO.output(Motor_IN1, GPIO.LOW)   # Left motor backward
-    GPIO.output(Motor_IN2, GPIO.HIGH)  
-    GPIO.output(Motor_IN3, GPIO.LOW)   # Right motor backward
-    GPIO.output(Motor_IN4, GPIO.HIGH)  
-    print("back")
-
-def TurnLeft():
-    pwm_motor_1.ChangeDutyCycle(Pwm_Speed/2)       
-    pwm_motor_2.ChangeDutyCycle(Pwm_Speed)
-    GPIO.output(Motor_IN1, GPIO.LOW)   
-    GPIO.output(Motor_IN2, GPIO.LOW)  # Left motor reverse
-    GPIO.output(Motor_IN3, GPIO.LOW)  
-    GPIO.output(Motor_IN4, GPIO.HIGH)   # Right motor stop
-    print("Right")
-
-def TurnRight():
-    pwm_motor_1.ChangeDutyCycle(Pwm_Speed)       
-    pwm_motor_2.ChangeDutyCycle(Pwm_Speed/2)
-    GPIO.output(Motor_IN1, GPIO.HIGH)   
-    GPIO.output(Motor_IN2, GPIO.LOW)  # Left motor reverse
-    GPIO.output(Motor_IN3, GPIO.LOW)  
-    GPIO.output(Motor_IN4, GPIO.LOW)   # Right motor stop
-    print("Left")
-
-def StopMotors():
-    pwm_motor_1.ChangeDutyCycle(0)       
-    pwm_motor_2.ChangeDutyCycle(0)
-    GPIO.output(Motor_IN1, GPIO.LOW)   
-    GPIO.output(Motor_IN2, GPIO.LOW)   
-    GPIO.output(Motor_IN3, GPIO.LOW)   
-    GPIO.output(Motor_IN4, GPIO.LOW)   
-    print("STOP")
+    def getMotorspeed(self):
+        return self.MotorSpeedA, self.MotorSpeedB
+    
+    # value must be between 0 - 100
+    def changeBaseSpeed(self, newSpeed):
+        self.pwm_speed = newSpeed
