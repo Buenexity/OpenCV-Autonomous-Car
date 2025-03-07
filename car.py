@@ -84,8 +84,8 @@ class Motor:
 
     def set_pid_speed(self, pid_offset):
         # Ensure motor speed stays between 0 and 100
-        MotorSpeedA = max(0, min(self.pwm_speed - pid_offset, 100))
-        MotorSpeedB = max(0, min(self.pwm_speed + pid_offset, 100))
+        MotorSpeedA = max(0, min(self.pwm_speed - pid_offset, 60))
+        MotorSpeedB = max(0, min(self.pwm_speed + pid_offset, 60))
         
         self.pwm_motor_1.ChangeDutyCycle(MotorSpeedA)
         self.pwm_motor_2.ChangeDutyCycle(MotorSpeedB)

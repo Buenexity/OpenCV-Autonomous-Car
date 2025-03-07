@@ -15,30 +15,30 @@ class PIDcontroller:
         self.output = 0
         self.last_time = time.time() #last time we measured
 
-        def ComputeError(self, error):
-            error = self.setpoint - error
+    def ComputeError(self, error):
+        error = self.setpoint - error
 
-            # Proportional
-            proproportional =  self.kp * error # proportional error =  kp * (target - error)
+        # Proportional
+        proproportional =  self.kp * error # proportional error =  kp * (target - error)
 
-            # check elapsed time 
-            now = time.time()   #current time
-            self.dt = now - self.last_time #time since last update
-            self.last_time = now #update for next reading
+        # check elapsed time 
+        now = time.time()   #current time
+        self.dt = now - self.last_time #time since last update
+        self.last_time = now #update for next reading
 
-            #Derivative
-            derivative = (error - self.prev_error) / self.dt if self.dt != 0 else 0
-            derivative = self.kd * derivative
+        #Derivative
+        derivative = (error - self.prev_error) / self.dt if self.dt != 0 else 0
+        derivative = self.kd * derivative
 
-            #Integral
-            self.integral += error * self.dt
-            integral = self.ki * self.integral
-            
-            self.output = proproportional + integral + derivative
+        #Integral
+        self.integral += error * self.dt
+        integral = self.ki * self.integral
+                    
+        self.output = proproportional + integral + derivative
 
-             # Store error for the next derivative calculation
-            self.prev_error = error
-            
-            #Integral
-            return self.output
+        # Store error for the next derivative calculation
+        self.prev_error = error
+                    
+        #Integral
+        return int(self.output)
         
