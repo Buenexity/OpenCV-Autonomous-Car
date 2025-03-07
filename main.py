@@ -2,6 +2,7 @@ from car import Motor
 import cv2
 import imageProcessing as imp
 from pid import PIDcontroller;
+
 cap = cv2.VideoCapture(0)
 
 
@@ -36,5 +37,7 @@ while True:
     
     if cv2.waitKey(1) == ord('q'):
         break
+
+speedLimit = imp.SpeedLimitDetection('./images/yellownumber.PNG')
 
 cv2.destroyAllWindows()
