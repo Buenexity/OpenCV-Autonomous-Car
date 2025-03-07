@@ -6,19 +6,18 @@ pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tessera
 
 font = cv2.FONT_HERSHEY_COMPLEX
 
-LOWER_YELLOW = np.array([20, 200, 130])
-UPPER_YELLOW = np.array([30, 255, 250])
-
-STOPLIGHT_MIN_SIZE = 50
 ROI_WIDTH_CONSTANT = 0.8
 ROI_HEIGHT_CONSTANT = 2
 
+# Thresholds of signal and sign colors
+SIGN_MIN_SIZE = 50
+LOWER_RED = np.array([0, 140, 110]) 
+UPPER_RED = np.array([4, 255, 255]) 
+LOWER_GREEN = np.array([83, 110, 40])
+UPPER_GREEN = np.array([87, 255, 255])
+LOWER_YELLOW = np.array([20, 200, 130])
+UPPER_YELLOW = np.array([30, 255, 250])
 
-# Threshold of red and green stoplights in HSV space 
-lower_red = np.array([0, 140, 110]) 
-upper_red = np.array([4, 255, 255]) 
-lower_green = np.array([80, 160, 40])
-upper_green = np.array([90, 255, 255])
 
 def FindOffset(frame, ret):
         image_col = frame;
@@ -142,7 +141,7 @@ def FindOffset(frame, ret):
         cv2.imshow('image_col', image_col)  
         return offsetSum
 
-
+#  Returns number on yellow circular speed limit signs. Returns Null if none are found.
 def SpeedLimitDetection(image_path):
     # Read the input image
     src = cv2.imread(image_path)
@@ -177,7 +176,7 @@ def SpeedLimitDetection(image_path):
         minDist=rows / 8, 
         param1=100, 
         param2=30, 
-        minRadius=10,    # Example minimum radius
+        minRadius=SIGN_MIN_SIZE,    
         maxRadius=300    # Example maximum radius
     )
 
@@ -230,19 +229,18 @@ def SpeedLimitDetection(image_path):
     cv2.destroyAllWindows()
     
     return text
-
-      
-      
-# takes an image and a color either 'red' or 'green.' Finds a circle of that color and returns it's radius.
+   
+# Takes an image and a color either 'red' or 'green.' Finds a circle of that color and returns it's radius.
+# Returns 0 if no circles found. Returns -1 if unexpected color.
 def Find_Stoplight(image_rgb, color):
     # convert to HSV color space for better thresholding
     image_hsv = cv2.cvtColor(image_rgb, cv2.COLOR_BGR2HSV)
 
     # Make a black-and-white mask of a specific color
     if (color == 'red'):
-        mask = cv2.inRange(image_hsv, lower_red, upper_red)
+        mask = cv2.inRange(image_hsv, LOWER_RED, UPPER_RED)
     elif (color == 'green'):
-        mask = cv2.inRange(image_hsv, lower_green, upper_green) 
+        mask = cv2.inRange(image_hsv, LOWER_GREEN, UPPER_GREEN) 
     else:
         return -1
 
