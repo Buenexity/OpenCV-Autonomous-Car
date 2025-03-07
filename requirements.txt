@@ -1,0 +1,7 @@
+# install this before running pip (this is for pytesseract): https://github.com/UB-Mannheim/tesseract/wiki
+# do this command in console to get packages: pip install -r requirements.txt
+
+opencv-python # for opencv 
+pytesseract # for number detection
+
+

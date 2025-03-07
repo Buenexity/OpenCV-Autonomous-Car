@@ -29,4 +29,7 @@ while True:
     if cv2.waitKey(1) == ord('q'):
         break
 
+speedLimit = imp.SpeedLimitDetection('./images/yellownumber.PNG')
+
 cv2.destroyAllWindows()
+

@@ -1,8 +1,16 @@
 import cv2
 import numpy as np
+import re
+import pytesseract
+pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
-font = cv2.FONT_HERSHEY_COMPLEX 
+font = cv2.FONT_HERSHEY_COMPLEX
+
+LOWER_YELLOW = np.array([20, 200, 130])
+UPPER_YELLOW = np.array([30, 255, 250])
+
 STOPLIGHT_MIN_SIZE = 50
+
 
 # Threshold of red and green stoplights in HSV space 
 lower_red = np.array([0, 140, 110]) 
@@ -131,6 +139,96 @@ def FindOffset(frame, ret):
         cv2.imshow('image', image)
         cv2.imshow('image_col', image_col)  
         return offsetSum
+
+
+def SpeedLimitDetection(image_path):
+    # Read the input image
+    src = cv2.imread(image_path)
+
+    # Convert from BGR to HSV color space
+    image_hsv = cv2.cvtColor(src, cv2.COLOR_BGR2HSV)
+
+    # Create a mask for all pixels within the yellow range
+    mask = cv2.inRange(image_hsv, LOWER_YELLOW, UPPER_YELLOW)
+
+    # Optional: Blur the mask to reduce noise (you can adjust kernel size)
+    mask = cv2.blur(mask, (5, 5))
+
+    # Apply the mask to the original image
+    single_color = cv2.bitwise_and(src, src, mask=mask)
+
+    # Convert the masked image to grayscale
+    gray = cv2.cvtColor(single_color, cv2.COLOR_BGR2GRAY)
+
+    # (Optional) Apply a slight blur or threshold before HoughCircles if needed
+    # gray = cv2.GaussianBlur(gray, (5, 5), 0)
+
+    cv2.imshow("Gray", gray)
+
+    # Use HoughCircles to detect circles in the grayscale image
+    rows = gray.shape[0]
+    # Adjust minRadius/maxRadius based on your expected circle sizes
+    circles = cv2.HoughCircles(
+        gray, 
+        cv2.HOUGH_GRADIENT, 
+        dp=1, 
+        minDist=rows / 8, 
+        param1=100, 
+        param2=30, 
+        minRadius=10,    # Example minimum radius
+        maxRadius=300    # Example maximum radius
+    )
+
+    # Print or process the detected circles
+    print(circles)
+    iter = 0
+    # Optionally, draw the circles on the original image for visualization
+    if circles is not None:
+        circles = np.uint16(np.around(circles))
+        for circle in circles[0, :]:
+            x, y, r = circle
+            iter = iter + 1
+            # Use a fraction of the detected radius to crop only the inner region.
+            # Adjust the factor (e.g., 0.6) based on your image.
+            new_r = int(r * 0.6)
+            
+            # Define new cropping boundaries based on the reduced radius
+            x1 = max(0, x - new_r)
+            y1 = max(0, y - new_r)
+            x2 = min(src.shape[1], x + new_r)
+            y2 = min(src.shape[0], y + new_r)
+            
+            # Crop the image to the new ROI
+            cropped = src[y1:y2, x1:x2]
+            
+            # Preprocess the cropped image for OCR
+            gray_cropped = cv2.cvtColor(cropped, cv2.COLOR_BGR2GRAY)
+            _, thresh = cv2.threshold(gray_cropped, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
+            
+            #kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+            kernel = np.ones((3,3), np.uint8)
+
+            thresh = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel, iterations=1)
+            cv2.imshow(f"Window {iter}", thresh)
+
+            # Configure pytesseract to read only digits
+            config = r'-c tessedit_char_whitelist=0123456789 --psm 7'
+            text = pytesseract.image_to_string(thresh, config=config)
+            
+            print(f"Detected text: {text.strip()}")
+            
+            # For visualization, draw the original circle and the new crop area on the image
+            cv2.circle(src, (x, y), r, (0, 255, 0), 2)
+            cv2.rectangle(src, (x1, y1), (x2, y2), (255, 0, 0), 2)
+
+            cv2.putText(src, text.strip(), (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+
+    cv2.imshow("Detected Circles and Numbers", src)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    
+    return 
+
       
       
 # takes an image and a color either 'red' or 'green.' Finds a circle of that color and returns it's radius.
@@ -190,3 +288,4 @@ def Find_Stoplight(image_rgb, color):
         radius = int(circles[0][0][2])
         # I think this is being affected by earlier code for displaying and may have to remove a [0] in the future
         return radius
+
