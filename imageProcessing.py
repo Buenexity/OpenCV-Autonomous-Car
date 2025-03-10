@@ -19,7 +19,7 @@ LOWER_YELLOW = np.array([20, 200, 130])
 UPPER_YELLOW = np.array([30, 255, 250])
 
 
-def FindOffset(frame, ret):
+def findOffset(frame, ret):
         image_col = frame;
 
         # Image dimensions
@@ -142,43 +142,8 @@ def FindOffset(frame, ret):
         return offsetSum
 
 #  Returns number on yellow circular speed limit signs. Returns Null if none are found.
-def SpeedLimitDetection(image_path):
-    # Read the input image
-    src = cv2.imread(image_path)
-
-    # Convert from BGR to HSV color space
-    image_hsv = cv2.cvtColor(src, cv2.COLOR_BGR2HSV)
-
-    # Create a mask for all pixels within the yellow range
-    mask = cv2.inRange(image_hsv, LOWER_YELLOW, UPPER_YELLOW)
-
-    # Optional: Blur the mask to reduce noise (you can adjust kernel size)
-    mask = cv2.blur(mask, (5, 5))
-
-    # Apply the mask to the original image
-    single_color = cv2.bitwise_and(src, src, mask=mask)
-
-    # Convert the masked image to grayscale
-    gray = cv2.cvtColor(single_color, cv2.COLOR_BGR2GRAY)
-
-    # (Optional) Apply a slight blur or threshold before HoughCircles if needed
-    # gray = cv2.GaussianBlur(gray, (5, 5), 0)
-
-    cv2.imshow("Gray", gray)
-
-    # Use HoughCircles to detect circles in the grayscale image
-    rows = gray.shape[0]
-    # Adjust minRadius/maxRadius based on your expected circle sizes
-    circles = cv2.HoughCircles(
-        gray, 
-        cv2.HOUGH_GRADIENT, 
-        dp=1, 
-        minDist=rows / 8, 
-        param1=100, 
-        param2=30, 
-        minRadius=SIGN_MIN_SIZE,    
-        maxRadius=300    # Example maximum radius
-    )
+def detectSpeedLimit(image_rgb):
+    circles = findColorCircles(image_rgb, 'yellow')
 
     # Print or process the detected circles
     print(circles)
@@ -196,11 +161,11 @@ def SpeedLimitDetection(image_path):
             # Define new cropping boundaries based on the reduced radius
             x1 = max(0, x - new_r)
             y1 = max(0, y - new_r)
-            x2 = min(src.shape[1], x + new_r)
-            y2 = min(src.shape[0], y + new_r)
+            x2 = min(image_rgb.shape[1], x + new_r)
+            y2 = min(image_rgb.shape[0], y + new_r)
             
             # Crop the image to the new ROI
-            cropped = src[y1:y2, x1:x2]
+            cropped = image_rgb[y1:y2, x1:x2]
             
             # Preprocess the cropped image for OCR
             gray_cropped = cv2.cvtColor(cropped, cv2.COLOR_BGR2GRAY)
@@ -231,52 +196,23 @@ def SpeedLimitDetection(image_path):
     return text
    
 # Takes an image and a color either 'red' or 'green.' Finds a circle of that color and returns it's radius.
-# Returns 0 if no circles found. Returns -1 if unexpected color.
-def Find_Stoplight(image_rgb, color):
-    # convert to HSV color space for better thresholding
-    image_hsv = cv2.cvtColor(image_rgb, cv2.COLOR_BGR2HSV)
+# Returns 0 if no circles found.
+def findStoplight(image_rgb, color):
 
-    # Make a black-and-white mask of a specific color
-    if (color == 'red'):
-        mask = cv2.inRange(image_hsv, LOWER_RED, UPPER_RED)
-    elif (color == 'green'):
-        mask = cv2.inRange(image_hsv, LOWER_GREEN, UPPER_GREEN) 
-    else:
-        return -1
-
-    # Eliminate noise
-    mask = cv2.erode(mask, np.ones((2, 2), np.uint8), iterations=1)
-    mask = cv2.blur(mask, (70, 70))
-    
-    # The black region in the mask has the value of 0
-    # so when multiplied with original image removes all regions of other colors
-    single_color = cv2.bitwise_and(image_rgb, image_rgb, mask = mask) 
-
-    # convert to grayscale to prepare for Hough transform
-    gray = cv2.cvtColor(single_color, cv2.COLOR_BGR2GRAY)
-
-    # Use Hough circles
-    rows = gray.shape[0]
-    circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, 1, rows / 8,
-                               param1=100, param2=30,
-                               minRadius=STOPLIGHT_MIN_SIZE, maxRadius=300)
-
-    print(circles)
+    circles = findColorCircles(image_rgb, color)
     
     # Drawing on and displaying the image for testing purposes
     if circles is not None:
         circles = np.uint16(np.around(circles))
         for i in circles[0, :]:
-            center = (i[0], i[1]) # circle center
-            cv2.circle(image_rgb, center, 1, (0, 100, 100), 3) # circle outline
+            center = (i[0], i[1])
+            cv2.circle(image_rgb, center, 1, (0, 0, 0), 3) # draw center
             radius = i[2]
-            cv2.circle(image_rgb, center, radius, (255, 0, 255), 3)
-
+            cv2.circle(image_rgb, center, radius, (0, 0, 0), 8) #draw outline
+    
     image_rgb = cv2.resize(image_rgb, (image_rgb.shape[1] // 6, image_rgb.shape[0] // 6))
-    single_color = cv2.resize(single_color, (single_color.shape[1] // 6, single_color.shape[0] // 6))
 
     cv2.imshow('circles', image_rgb) 
-    cv2.imshow('single color', single_color)
       
     cv2.waitKey(0) 
     cv2.destroyAllWindows() 
@@ -289,3 +225,44 @@ def Find_Stoplight(image_rgb, color):
         # I think this is being affected by earlier code for displaying and may have to remove a [0] in the future
         return radius
 
+# Detects circles of a specific color and returns a list of circle's with each circle represented with it's center 
+# and radius in [h, k, r] format.
+def findColorCircles(image_rgb, color):
+    # convert to HSV color space for better thresholding
+    image_hsv = cv2.cvtColor(image_rgb, cv2.COLOR_BGR2HSV)
+
+    # Make a black-and-white mask of a specific color
+    if (color == 'red'):
+        mask = cv2.inRange(image_hsv, LOWER_RED, UPPER_RED)
+    elif (color == 'green'):
+        mask = cv2.inRange(image_hsv, LOWER_GREEN, UPPER_GREEN) 
+    elif (color == 'yellow'):
+        mask = cv2.inRange(image_hsv, LOWER_YELLOW, UPPER_YELLOW)
+    else:
+        return None
+
+    # Eliminate noise
+    mask = cv2.erode(mask, np.ones((2, 2), np.uint8), iterations=1)
+    mask = cv2.blur(mask, (70, 70))
+    
+    # The black region in the mask has the value of 0
+    # so when multiplied with original image removes all regions of other colors
+    single_color = cv2.bitwise_and(image_rgb, image_rgb, mask = mask) 
+
+    # single_color = cv2.resize(single_color, (single_color.shape[1] // 6, single_color.shape[0] // 6))
+    # cv2.imshow('single color', single_color)
+    # cv2.waitKey(0) 
+    # cv2.destroyAllWindows() 
+
+    # convert to grayscale to prepare for Hough transform
+    gray = cv2.cvtColor(single_color, cv2.COLOR_BGR2GRAY)
+
+    # Use Hough circles
+    rows = gray.shape[0]
+    circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, 1, rows / 8,
+                               param1=100, param2=30,
+                               minRadius=SIGN_MIN_SIZE, maxRadius=300)
+    return circles
+
+test = cv2.imread('images/yellownumber.PNG')
+detectSpeedLimit(test)

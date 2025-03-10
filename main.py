@@ -23,7 +23,7 @@ while True:
     if not ret:
         print("Can't receive frame (stream end?). Exiting ...")
     # change carOffset to be proportional to angle!
-    carOffset = imp.FindOffset(frame, ret)
+    carOffset = imp.findOffset(frame, ret)
     car.set_pid_speed(int(pid.ComputeError(carOffset - 0)))
     #if (carOffset < -40):
      #   car.TurnLeft()
