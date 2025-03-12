@@ -84,11 +84,19 @@ class Motor:
 
     def set_pid_speed(self, pid_offset, angle):
         # Ensure motor speed stays between 0 and 100
-        MotorSpeedA = max(0, min(self.pwm_speed - pid_offset, 60))
-        MotorSpeedB = max(0, min(self.pwm_speed + pid_offset, 60))
+        MotorSpeedA = max(0, min( (self.pwm_speed - pid_offset) , 100))
+        MotorSpeedB = max(0, min(self.pwm_speed + pid_offset, 100))
 
-        MotorSpeedA /= (angle / 90)
-        MotorSpeedB /= (angle / 90)
+        #output = output_start + ((output_end - output_start) / (input_end - input_start)) * (input - input_start)
+
+        MotorSpeedA = MotorSpeedA + angle * 0.8
+        MotorSpeedB = MotorSpeedB - angle * 0.8
+        
+        MotorSpeedA = max(0, min(MotorSpeedA, 80))
+        MotorSpeedB = max(0, min(MotorSpeedB, 80))
+        
+        print(f"Left motor speed: {MotorSpeedA}")
+        print(f"Right motor speed: {MotorSpeedB}")
         
         self.pwm_motor_1.ChangeDutyCycle(MotorSpeedA)
         self.pwm_motor_2.ChangeDutyCycle(MotorSpeedB)
@@ -98,8 +106,7 @@ class Motor:
         GPIO.output(self.Motor_IN3, GPIO.LOW)
         GPIO.output(self.Motor_IN4, GPIO.HIGH)
         
-        print(f"Left motor speed: {MotorSpeedA}")
-        print(f"Right motor speed: {MotorSpeedB}")
+
 
     def getMotorspeed(self):
         return self.MotorSpeedA, self.MotorSpeedB
