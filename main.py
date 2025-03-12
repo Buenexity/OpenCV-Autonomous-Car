@@ -9,9 +9,9 @@ cap = cv2.VideoCapture(0)
 
 
 # Initialize car class with a percentage of total speed
-INIT_SPEED = 50
-kp = .1
-kd = 0
+INIT_SPEED = 30
+kp = .3
+kd = 0.01
 ki = .05
 car = Motor(INIT_SPEED)
 
@@ -23,20 +23,19 @@ while True:
         print("Cannot open camera")
         image_col = cv2.imread('./images/track.jpg')
             
-    radius = imp.Find_Stoplight(frame, 'red')
-    if (radius >0):
-        print("red light")
-        car.stop_motors()
-        time.sleep(1)
-        continue
+    #radius = imp.Find_Stoplight(frame, 'red')
+    #if (radius >0):
+     #   print("red light")
+      #  car.stop_motors()
+       # continue
     # if frame is read correctly ret is True
     if not ret:
         print("Can't receive frame (stream end?). Exiting ...")
-    contours = cv2.findContours(image_col, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    
     # change carOffset to be proportional to angle!
-    lineAngle = getAverageAngle(contours, image_col)
-    carOffset = imp.FindOffset(frame, ret)
-    car.set_pid_speed(int(pid.ComputeError(carOffset)))
+ 
+    carOffset, carAngle = imp.FindOffset(frame)
+    car.set_pid_speed(int(pid.ComputeError(carOffset)), carAngle)
     
     #if (carOffset < -40):
      #   car.TurnLeft()
