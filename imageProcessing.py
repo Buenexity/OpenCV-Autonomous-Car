@@ -13,10 +13,12 @@ ROI_HEIGHT_CONSTANT = 2
 SIGN_MIN_SIZE = 50
 LOWER_RED = np.array([0, 140, 110]) 
 UPPER_RED = np.array([4, 255, 255]) 
+
 LOWER_GREEN = np.array([83, 110, 40])
 UPPER_GREEN = np.array([87, 255, 255])
-LOWER_YELLOW = np.array([20, 200, 130])
-UPPER_YELLOW = np.array([30, 255, 250])
+
+LOWER_BLUE = np.array([95, 100,  100])
+UPPER_BLUE = np.array([125, 250, 255])
 
 
 def findOffset(frame, ret):
@@ -143,55 +145,65 @@ def findOffset(frame, ret):
 
 #  Returns number on yellow circular speed limit signs. Returns Null if none are found.
 def detectSpeedLimit(image_rgb):
-    circles = findColorCircles(image_rgb, 'yellow')
+    circles = findColorCircles(image_rgb, 'blue')
 
-    # Print or process the detected circles
-    print(circles)
-    iter = 0
-    # Optionally, draw the circles on the original image for visualization
-    if circles is not None:
-        circles = np.uint16(np.around(circles))
-        for circle in circles[0, :]:
-            x, y, r = circle
-            iter = iter + 1
-            # Use a fraction of the detected radius to crop only the inner region.
-            # Adjust the factor (e.g., 0.6) based on your image.
-            new_r = int(r * 0.6)
-            
-            # Define new cropping boundaries based on the reduced radius
-            x1 = max(0, x - new_r)
-            y1 = max(0, y - new_r)
-            x2 = min(image_rgb.shape[1], x + new_r)
-            y2 = min(image_rgb.shape[0], y + new_r)
-            
-            # Crop the image to the new ROI
-            cropped = image_rgb[y1:y2, x1:x2]
-            
-            # Preprocess the cropped image for OCR
-            gray_cropped = cv2.cvtColor(cropped, cv2.COLOR_BGR2GRAY)
-            _, thresh = cv2.threshold(gray_cropped, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
-            
-            #kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-            kernel = np.ones((3,3), np.uint8)
+    if circles is None:
+        return 0
+    else:
+        circle = getBiggestCircle(circles)
 
-            thresh = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel, iterations=1)
-            cv2.imshow(f"Window {iter}", thresh)
+    # if circles is not None:
+    #     circles = np.uint16(np.around(circles))
+    #     for i in circles[0, :]:
+    #         center = (i[0], i[1])
+    #         cv2.circle(image_rgb, center, 1, (0, 0, 0), 3) # draw center
+    #         radius = i[2]
+    #         cv2.circle(image_rgb, center, radius, (0, 0, 0), 8) #draw outline
+    
+    #image_rgb = cv2.resize(image_rgb, (image_rgb.shape[1] // 6, image_rgb.shape[0] // 6)
 
-            # Configure pytesseract to read only digits
-            config = r'-c tessedit_char_whitelist=0123456789 --psm 7'
-            text = pytesseract.image_to_string(thresh, config=config)
-            
-            print(f"Detected text: {text.strip()}")
-            
-            # For visualization, draw the original circle and the new crop area on the image
-            cv2.circle(src, (x, y), r, (0, 255, 0), 2)
-            cv2.rectangle(src, (x1, y1), (x2, y2), (255, 0, 0), 2)
+    circle = np.uint16(np.around(circles))
+    iter += 1
+    x, y, r = circle
 
-            cv2.putText(src, text.strip(), (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+    # Use a fraction of the detected radius to crop only the inner region.
+    new_r = int(r * 0.6)
+    
+    # Define cropping boundaries while preventing going out of the image bounds
+    x1 = max(0, x - new_r)
+    y1 = max(0, y - new_r)
+    x2 = min(image_rgb.shape[1], x + new_r)
+    y2 = min(image_rgb.shape[0], y + new_r)
+    
+    # Crop the ROI from the image
+    cropped = image_rgb[y1:y2, x1:x2]
+    #print(f"{image_rgb[y1:y2, x1:x2]}")
+    
+    # Preprocess the cropped image for OCR:
+    # 1. Convert to grayscale.
+    gray_cropped = cv2.cvtColor(cropped, cv2.COLOR_BGR2GRAY)
+    # 2. Apply thresholding with Otsu's method.
+    _, thresh = cv2.threshold(gray_cropped, 130, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
+    thresh = cv2.dilate(thresh, np.ones((10, 10), np.uint8), iterations=2)
 
-    cv2.imshow("Detected Circles and Numbers", src)
+    # 3. Optionally perform morphological opening to reduce noise.
+    #kernel = np.ones((1, 1), np.uint8)
+    #thresh = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel, iterations=10)
+    
+    # Configure pytesseract to read only digits:
+    config = r'-c tessedit_char_whitelist=0123456789 --psm 7'
+    text = pytesseract.image_to_string(thresh, config=config)
+    print(f"Detected text: {text.strip()}")
+    text = text.strip()
+    # For visualization, draw the detected circle and ROI on the original image
+    cv2.circle(image_rgb, (x, y), r, (0, 255, 0), 2)
+    cv2.rectangle(image_rgb, (x1, y1), (x2, y2), (255, 0, 0), 2)
+    cv2.putText(image_rgb, text.strip(), (x1, y1 - 10),
+                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+
+    image_resize = cv2.resize(image_rgb, (image_rgb.shape[1] // 6, image_rgb.shape[0] // 6))
+    cv2.imshow("Detected Circles and Numbers", image_resize)
     cv2.waitKey(0)
-    cv2.destroyAllWindows()
     
     return text
    
@@ -200,31 +212,14 @@ def detectSpeedLimit(image_rgb):
 def findStoplight(image_rgb, color):
 
     circles = findColorCircles(image_rgb, color)
-    
-    # Drawing on and displaying the image for testing purposes
-    if circles is not None:
-        circles = np.uint16(np.around(circles))
-        for i in circles[0, :]:
-            center = (i[0], i[1])
-            cv2.circle(image_rgb, center, 1, (0, 0, 0), 3) # draw center
-            radius = i[2]
-            cv2.circle(image_rgb, center, radius, (0, 0, 0), 8) #draw outline
-    
-    image_rgb = cv2.resize(image_rgb, (image_rgb.shape[1] // 6, image_rgb.shape[0] // 6))
-
-    cv2.imshow('circles', image_rgb) 
-      
-    cv2.waitKey(0) 
-    cv2.destroyAllWindows() 
 
     # Each circle in circles [h, k, r]
     if circles is None:
         return 0
     else:
-        radius = int(circles[0][0][2])
-        # I think this is being affected by earlier code for displaying and may have to remove a [0] in the future
-        return radius
-
+        circle = getBiggestCircle(circles)
+        return circle[2]
+    
 # Detects circles of a specific color and returns a list of circle's with each circle represented with it's center 
 # and radius in [h, k, r] format.
 def findColorCircles(image_rgb, color):
@@ -236,8 +231,8 @@ def findColorCircles(image_rgb, color):
         mask = cv2.inRange(image_hsv, LOWER_RED, UPPER_RED)
     elif (color == 'green'):
         mask = cv2.inRange(image_hsv, LOWER_GREEN, UPPER_GREEN) 
-    elif (color == 'yellow'):
-        mask = cv2.inRange(image_hsv, LOWER_YELLOW, UPPER_YELLOW)
+    elif (color == 'blue'):
+        mask = cv2.inRange(image_hsv, LOWER_BLUE, UPPER_BLUE)
     else:
         return None
 
@@ -249,11 +244,6 @@ def findColorCircles(image_rgb, color):
     # so when multiplied with original image removes all regions of other colors
     single_color = cv2.bitwise_and(image_rgb, image_rgb, mask = mask) 
 
-    # single_color = cv2.resize(single_color, (single_color.shape[1] // 6, single_color.shape[0] // 6))
-    # cv2.imshow('single color', single_color)
-    # cv2.waitKey(0) 
-    # cv2.destroyAllWindows() 
-
     # convert to grayscale to prepare for Hough transform
     gray = cv2.cvtColor(single_color, cv2.COLOR_BGR2GRAY)
 
@@ -261,8 +251,18 @@ def findColorCircles(image_rgb, color):
     rows = gray.shape[0]
     circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, 1, rows / 8,
                                param1=100, param2=30,
-                               minRadius=SIGN_MIN_SIZE, maxRadius=300)
+                               minRadius=SIGN_MIN_SIZE, maxRadius=0)
     return circles
 
-test = cv2.imread('images/yellownumber.PNG')
-detectSpeedLimit(test)
+# Takes a list of circles and returns the radius of the largest circle
+def getBiggestCircle(circles):
+
+    if circles is not None:
+        biggestCircle = circles[0][0]
+        for circle in circles[0, :]:
+            #print(f"maxRadius: {biggestCircle[2]} currentRadius: {circle[2]}")
+            if circle[2] > biggestCircle[2]:
+                biggestCircle = circle
+        return biggestCircle
+    else:
+        return 0
