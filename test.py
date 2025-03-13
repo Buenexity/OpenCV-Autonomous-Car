@@ -1,39 +1,31 @@
 import cv2
 import numpy as np
-from imageProcessing import FindOffset
+from imageProcessing import findOffset
 from findAngle import getAverageAngle
 
 
 # Load the image
-image_col = cv2.imread('./images/track_zoom.jpg')
+image_col = cv2.imread('.\images\\track90revangled.png')
 
-# Convert the image to grayscale
-image_gray = cv2.cvtColor(image_col, cv2.COLOR_BGR2GRAY)
+image = cv2.cvtColor(image_col, cv2.COLOR_BGR2GRAY)
+image = cv2.GaussianBlur(image, (5, 5), 0)
 
-# Enhance contrast (optional, depends on your image quality)
-image_contrast = cv2.equalizeHist(image_gray)
-
-# Apply a binary threshold to isolate the black line (dark regions)
-_, binary_image = cv2.threshold(image_contrast, 50, 255, cv2.THRESH_BINARY_INV)
-
-# Morphological transformation to fill small gaps and connect lines
-kernel = np.ones((5, 5), np.uint8)  # Kernel for dilation
-dilated_image = cv2.dilate(binary_image, kernel, iterations=1)
+ret, image = cv2.threshold(image, 120, 255, cv2.THRESH_BINARY_INV)
 
 # Find contours (the edges of the black line)
-contours, _ = cv2.findContours(dilated_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+contours, _ = cv2.findContours(image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
 angle = getAverageAngle(contours, image_col)
 print(angle)
-print(FindOffset(image_col) * angle / 45) 
+# print(findOffset(image_col, _)) 
 
 # Draw the contours on the original image (for visualization)
 cv2.drawContours(image_col, contours, -1, (0, 255, 0), 2)
 
 # Resize the image to its original size before showing it
-height, width = image_col.shape[:2]
+# height, width = image_col.shape[:2]
 cv2.namedWindow('Detected Line', cv2.WINDOW_NORMAL)
-cv2.resizeWindow('Detected Line', width, height)
+# cv2.resizeWindow('Detected Line', width, height)
 
 # Display the original image with contours
 cv2.imshow('Detected Line', image_col)

@@ -4,10 +4,9 @@ import argparse
 import imutils
 import math
 
-def getAverageAngle(contours):
-	maxc_center = 0, 0
+def getAverageAngle(contours, image):
 	count,asum = 0, 0
-	# height, width = image.shape[:2]
+	height, width = image.shape[:2]
 	# loop over the contours
 	for c in contours:
 		if ((cv2.contourArea(c) > 10000) & (cv2.contourArea(c) < 1500000)):
@@ -21,7 +20,7 @@ def getAverageAngle(contours):
 			approx = cv2.approxPolyDP(c, epsilon, True)
     
 
-			if len(approx) == 4:  # Check if it is a rectangle
+			if len(approx) >= 4:  # Check if it is a rectangle
 				# Sort the points based on x + y (top-left, bottom-right first)
 				sorted_pts = sorted(approx[:, 0], key=lambda p: (p[0] + p[1]))
 
@@ -38,27 +37,39 @@ def getAverageAngle(contours):
 					mid_bottom = ((top_right[0] + bottom_right[0]) // 2, (top_right[1] + bottom_right[1]) // 2)
 					
 				# # Draw the centerline
-				# cv2.line(image, mid_top, mid_bottom, (0, 255, 0), 2)
+				cv2.line(image, mid_top, mid_bottom, (0, 255, 0), 2)
 
 				# # Draw rectangle for visualization
-				# cv2.drawContours(image, [approx], -1, (255, 0, 0), 2)
+				cv2.drawContours(image, [approx], -1, (255, 0, 0), 2)
 
 				dx = mid_bottom[0] - mid_top[0]
 				dy = mid_bottom[1] - mid_top[1]
 				
 				# calculate angle
 				rect_angle = math.degrees(math.atan2(dy, dx))
-				angle_diff = abs(rect_angle - 90)
-				# cv2.line(image, (width // 2, 0), (width // 2, height), (255, 0, 0), 2)
+				
+				if rect_angle > 90:
+					rect_angle -= 180
+				elif rect_angle < -90:
+					rect_angle += 180
+				if (cX < width // 2):
+					angle_diff = -abs(rect_angle - 90)
+				else: angle_diff = abs(rect_angle - 90)
+				print(angle_diff)
+				cv2.line(image, (width // 2, 0), (width // 2, height), (255, 0, 0), 2)
 
 				asum += angle_diff;
 
 				# Display the angle on the image
-				# cv2.putText(image, f"Angle: {angle_diff:.2f} deg", (mid_top[0] + 20, mid_top[1]),
-				# 			cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 2)
-				# # draw the contour and center of the shape on the image
-				# cv2.putText(image, "center", (maxc_center[0] - 20, maxc_center[1] - 20),
-				# 	cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
-				# cv2.imshow('Angles', image)
-			
-	return asum / count
+				cv2.putText(image, f"Angle: {angle_diff:.2f} deg", (mid_top[0] + 20, mid_top[1]),
+							cv2.FONT_HERSHEY_SIMPLEX, 4, (0, 0, 255), 2)
+				# draw the contour and center of the shape on the image
+				cv2.putText(image, "center", (cX - 20, cY - 20),
+				 	cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+				cv2.line(image, mid_bottom, mid_top, (255, 255, 255), 2)
+				
+				cv2.namedWindow('Angles', cv2.WINDOW_NORMAL)
+				cv2.imshow('Angles', image)
+				cv2.imwrite('trackangles.jpg', image)
+	if count == 0: return 0
+	else: return asum / count
