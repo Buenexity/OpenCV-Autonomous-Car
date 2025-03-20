@@ -87,8 +87,11 @@ class Motor:
         MotorSpeedA = max(0, min(self.pwm_speed - pid_offset, 60))
         MotorSpeedB = max(0, min(self.pwm_speed + pid_offset, 60))
 
-        MotorSpeedA /= (angle / 90)
-        MotorSpeedB /= (angle / 90)
+        MotorSpeedA -= (angle*.7)
+        MotorSpeedB += (angle*.7) 
+        
+        MotorSpeedA = max(0, min(self.pwm_speed - pid_offset, 60))
+        MotorSpeedB = max(0, min(self.pwm_speed + pid_offset, 60))
         
         self.pwm_motor_1.ChangeDutyCycle(MotorSpeedA)
         self.pwm_motor_2.ChangeDutyCycle(MotorSpeedB)
@@ -98,8 +101,8 @@ class Motor:
         GPIO.output(self.Motor_IN3, GPIO.LOW)
         GPIO.output(self.Motor_IN4, GPIO.HIGH)
         
-        print(f"Left motor speed: {MotorSpeedA}")
-        print(f"Right motor speed: {MotorSpeedB}")
+        #print(f"Left motor speed: {MotorSpeedA}")
+        #print(f"Right motor speed: {MotorSpeedB}")
 
     def getMotorspeed(self):
         return self.MotorSpeedA, self.MotorSpeedB

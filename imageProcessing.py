@@ -3,24 +3,23 @@ import numpy as np
 import re
 import pytesseract
 from findAngle import getAverageAngle
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
 
 font = cv2.FONT_HERSHEY_COMPLEX
 
-ROI_WIDTH_CONSTANT = 0.8
-ROI_HEIGHT_CONSTANT = 2
+ROI_WIDTH_CONSTANT = 1
+ROI_HEIGHT_CONSTANT = 1.5
 
 # Thresholds of signal and sign colors
-SIGN_MIN_SIZE = 50
-LOWER_RED = np.array([0, 140, 110]) 
-UPPER_RED = np.array([4, 255, 255]) 
+SIGN_MIN_SIZE = 20
+LOWER_RED = np.array([0, 110, 110]) 
+UPPER_RED = np.array([5, 255, 255]) 
 
-LOWER_GREEN = np.array([83, 110, 40])
-UPPER_GREEN = np.array([87, 255, 255])
+LOWER_GREEN = np.array([80, 100, 40])
+UPPER_GREEN = np.array([90, 255, 255])
 
-LOWER_BLUE = np.array([95, 100,  100])
-UPPER_BLUE = np.array([125, 250, 255])
-
+LOWER_BLUE = np.array([105, 100,  100])
+UPPER_BLUE = np.array([115, 250, 255])
 
 def findOffset(frame, ret):
     image_col = frame
@@ -104,7 +103,7 @@ def findOffset(frame, ret):
         # Line from center of box to middle of screen for error reference
         contour_distance = box_center_x - (width // 2)
         offsetSum += contour_distance
-        print(contour_distance)
+        # print(contour_distance)
         cv2.line(image_col, (box_center_x, box_center_y), (width // 2, box_center_y), (0, 255, 255), 2)
         text = f"Error: {contour_distance} px" 
         cv2.putText(image_col, text, (box_center_x + 10, box_center_y - 10), cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 255, 255), 2, cv2.LINE_AA)
@@ -141,21 +140,21 @@ def findOffset(frame, ret):
     #resized_image_col = cv2.resize(image_col, (new_width, new_height))
 
     # debug sum value
-    print(offsetSum)
+    # print(offsetSum)
     
     cv2.imshow('image', image)
     cv2.imshow('image_col', image_col)
     return offsetSum
 
 #  Returns number on yellow circular speed limit signs. Returns Null if none are found.
-def detectSpeedLimit(image_rgb):
+def detectSpeedLimit(image_rgb, car):
     circles = findColorCircles(image_rgb, 'blue')
 
     if circles is None:
         return 0
     else:
         circle = getBiggestCircle(circles)
-
+    car.stop_motors()
     # if circles is not None:
     #     circles = np.uint16(np.around(circles))
     #     for i in circles[0, :]:
@@ -166,9 +165,11 @@ def detectSpeedLimit(image_rgb):
     
     #image_rgb = cv2.resize(image_rgb, (image_rgb.shape[1] // 6, image_rgb.shape[0] // 6)
 
-    circle = np.uint16(np.around(circles))
-    iter += 1
-    x, y, r = circle
+    #circle = np.uint16(np.around(circles))
+    #print(circle)
+    x = int(circle[0])
+    y = int(circle[1]) 
+    r = int(circle[2])
 
     # Use a fraction of the detected radius to crop only the inner region.
     new_r = int(r * 0.6)
@@ -188,8 +189,10 @@ def detectSpeedLimit(image_rgb):
     gray_cropped = cv2.cvtColor(cropped, cv2.COLOR_BGR2GRAY)
     # 2. Apply thresholding with Otsu's method.
     _, thresh = cv2.threshold(gray_cropped, 130, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
-    thresh = cv2.dilate(thresh, np.ones((10, 10), np.uint8), iterations=2)
-
+    thresh = cv2.dilate(thresh, np.ones((3, 3), np.uint8), iterations=1)
+    
+    cv2.imshow("iMAGE MASK", thresh)
+    
     # 3. Optionally perform morphological opening to reduce noise.
     #kernel = np.ones((1, 1), np.uint8)
     #thresh = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel, iterations=10)
@@ -200,16 +203,13 @@ def detectSpeedLimit(image_rgb):
     print(f"Detected text: {text.strip()}")
     text = text.strip()
     # For visualization, draw the detected circle and ROI on the original image
-    cv2.circle(image_rgb, (x, y), r, (0, 255, 0), 2)
-    cv2.rectangle(image_rgb, (x1, y1), (x2, y2), (255, 0, 0), 2)
-    cv2.putText(image_rgb, text.strip(), (x1, y1 - 10),
-                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-
-    image_resize = cv2.resize(image_rgb, (image_rgb.shape[1] // 6, image_rgb.shape[0] // 6))
-    cv2.imshow("Detected Circles and Numbers", image_resize)
-    cv2.waitKey(0)
-    
-    return text
+    #cv2.circle(image_rgb, (x, y), r, (0, 255, 0), 2)
+    #cv2.rectangle(image_rgb, (x1, y1), (x2, y2), (255, 0, 0), 2)
+    #cv2.putText(image_rgb, text.strip(), (x1, y1 - 10),
+    #cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                
+    return 0 if text == '' else int(text)
+   
    
 # Takes an image and a color either 'red' or 'green.' Finds a circle of that color and returns it's radius.
 # Returns 0 if no circles found.

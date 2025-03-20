@@ -3,5 +3,6 @@
 
 opencv-python # for opencv 
 pytesseract # for number detection
+RPi.GPIO # for gpio
 
 
