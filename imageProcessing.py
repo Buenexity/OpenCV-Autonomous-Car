@@ -3,20 +3,20 @@ import numpy as np
 import re
 import pytesseract
 from findAngle import getAverageAngle
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
 
 font = cv2.FONT_HERSHEY_COMPLEX
 
-ROI_WIDTH_CONSTANT = 0.8
+ROI_WIDTH_CONSTANT = 1
 ROI_HEIGHT_CONSTANT = 2
 
 # Thresholds of signal and sign colors
-SIGN_MIN_SIZE = 50
-LOWER_RED = np.array([0, 140, 110]) 
-UPPER_RED = np.array([4, 255, 255]) 
+SIGN_MIN_SIZE = 20
+LOWER_RED = np.array([0, 110, 110]) 
+UPPER_RED = np.array([10, 255, 255]) 
 
-LOWER_GREEN = np.array([83, 110, 40])
-UPPER_GREEN = np.array([87, 255, 255])
+LOWER_GREEN = np.array([80, 100, 40])
+UPPER_GREEN = np.array([90, 255, 255])
 
 LOWER_BLUE = np.array([95, 100,  100])
 UPPER_BLUE = np.array([125, 250, 255])
@@ -104,7 +104,7 @@ def findOffset(frame, ret):
         # Line from center of box to middle of screen for error reference
         contour_distance = box_center_x - (width // 2)
         offsetSum += contour_distance
-        print(contour_distance)
+        print(f"Distance: {contour_distance}")
         cv2.line(image_col, (box_center_x, box_center_y), (width // 2, box_center_y), (0, 255, 255), 2)
         text = f"Error: {contour_distance} px" 
         cv2.putText(image_col, text, (box_center_x + 10, box_center_y - 10), cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 255, 255), 2, cv2.LINE_AA)
@@ -137,8 +137,8 @@ def findOffset(frame, ret):
     cv2.line(image_col, (center_x, 0), (center_x, height), (255, 0, 0), 5)
 
     # Resize the image
-    #resized_image = cv2.resize(image, (new_width, new_height))
-    #resized_image_col = cv2.resize(image_col, (new_width, new_height))
+    resized_image = cv2.resize(image, (new_width, new_height))
+    resized_image_col = cv2.resize(image_col, (new_width, new_height))
 
     # debug sum value
     print(offsetSum)
@@ -166,9 +166,11 @@ def detectSpeedLimit(image_rgb):
     
     #image_rgb = cv2.resize(image_rgb, (image_rgb.shape[1] // 6, image_rgb.shape[0] // 6)
 
-    circle = np.uint16(np.around(circles))
-    iter += 1
-    x, y, r = circle
+    #circle = np.uint16(np.around(circles))
+    print(circle)
+    x = int(circle[0])
+    y = int(circle[1]) 
+    r = int(circle[2])
 
     # Use a fraction of the detected radius to crop only the inner region.
     new_r = int(r * 0.6)
@@ -200,16 +202,12 @@ def detectSpeedLimit(image_rgb):
     print(f"Detected text: {text.strip()}")
     text = text.strip()
     # For visualization, draw the detected circle and ROI on the original image
-    cv2.circle(image_rgb, (x, y), r, (0, 255, 0), 2)
-    cv2.rectangle(image_rgb, (x1, y1), (x2, y2), (255, 0, 0), 2)
-    cv2.putText(image_rgb, text.strip(), (x1, y1 - 10),
-                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-
-    image_resize = cv2.resize(image_rgb, (image_rgb.shape[1] // 6, image_rgb.shape[0] // 6))
-    cv2.imshow("Detected Circles and Numbers", image_resize)
-    cv2.waitKey(0)
-    
-    return text
+    #cv2.circle(image_rgb, (x, y), r, (0, 255, 0), 2)
+    #cv2.rectangle(image_rgb, (x1, y1), (x2, y2), (255, 0, 0), 2)
+    #cv2.putText(image_rgb, text.strip(), (x1, y1 - 10),
+    #cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                
+    return 0 if text == '' else int(text)
    
 # Takes an image and a color either 'red' or 'green.' Finds a circle of that color and returns it's radius.
 # Returns 0 if no circles found.

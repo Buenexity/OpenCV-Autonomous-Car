@@ -82,13 +82,13 @@ class Motor:
     # left motor - offset is subtracted from current base speed
     # right motor - offset is added from current base speed
 
-    def set_pid_speed(self, pid_offset, angle):
+    def set_pid_speed(self, pid_offset):
         # Ensure motor speed stays between 0 and 100
-        MotorSpeedA = max(0, min(self.pwm_speed - pid_offset, 60))
-        MotorSpeedB = max(0, min(self.pwm_speed + pid_offset, 60))
+        MotorSpeedA = max(0, min(self.pwm_speed - pid_offset, 100))
+        MotorSpeedB = max(0, min(self.pwm_speed + pid_offset, 100))
 
-        MotorSpeedA /= (angle / 90)
-        MotorSpeedB /= (angle / 90)
+        MotorSpeedA = max(0, min(MotorSpeedA, 50))
+        MotorSpeedB = max(0, min(MotorSpeedB, 50))
         
         self.pwm_motor_1.ChangeDutyCycle(MotorSpeedA)
         self.pwm_motor_2.ChangeDutyCycle(MotorSpeedB)
