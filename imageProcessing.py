@@ -30,6 +30,8 @@ def findOffset(frame, ret):
     # Convert to grayscale
     image = cv2.cvtColor(image_col, cv2.COLOR_BGR2GRAY)
     image = cv2.GaussianBlur(image, (5, 5), 0)
+    _, image = cv2.threshold(image, 120, 255, cv2.THRESH_BINARY_INV)
+
 
     # Apply thresholding
     # ret, image = cv2.threshold(image, 120, 255, cv2.THRESH_BINARY_INV)
@@ -42,18 +44,24 @@ def findOffset(frame, ret):
     box_x_track = (width - box_width_track) // 2
     box_y_track = height - box_height_track  
 
-    # ROI variables
-    roi_x, roi_y, roi_w, roi_h = box_x_track, box_y_track, box_width_track, box_height_track
+
+
+    mask = np.zeros_like(image, dtype=np.uint8)
+    cv2.rectangle(mask, (box_x_track, box_y_track), (box_x_track + box_width_track, box_y_track + box_height_track), 255, thickness=cv2.FILLED)
+
+    #rectangular mask
+    image = cv2.bitwise_and(image, mask)
+
         
     # square where tracking takes place
-    roi = image[roi_y:roi_y + roi_h, roi_x:roi_x + roi_w]
-    cv2.rectangle(image_col, (roi_x, roi_y), (roi_x + roi_w, roi_y + roi_h), (255, 255, 0), 5)
-    ret, roi = cv2.threshold(roi, 120, 255, cv2.THRESH_BINARY_INV)
+    cv2.rectangle(image_col, (box_x_track, box_y_track), (box_x_track + box_width_track, box_y_track + box_height_track), 255, thickness=cv2.FILLED)
+
+    
     # Apply erosion
-    roi = cv2.erode(roi,None, iterations=2)
+    image = cv2.erode(image,None, iterations=2)
 
     # Find contours
-    contours, hierarchy = cv2.findContours(roi, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    contours, hierarchy = cv2.findContours(image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
     # Find the average distance of dashes from center line
     offsetSum = 0
@@ -85,12 +93,6 @@ def findOffset(frame, ret):
             continue
         if solidity < .2:  # avoid weird shapes
             continue
-
-        # Adjusting the roi offset
-        approx[:, 0, 0] += roi_x # add all x-approx & y-approx values with roi offset
-        approx[:, 0, 1] += roi_y 
-        x += roi_x # add all x&y values with roi offset
-        y += roi_y
 
         # Draw contours and bounding box on the original image
         cv2.drawContours(image_col, [approx], 0, (0, 0, 255), 5)  
